@@ -180,8 +180,16 @@ and with site data blocked, and the picker must still render.
 
 Halda brand: near-black `#0D0D0D`, Plus Jakarta Sans from
 `assets.halda.ai/brand/fonts.css`, generously rounded corners, **no shadows**
-(`--shadow-*: initial` deletes the utilities), no gradients, official wordmark
-asset only — never typeset "Halda".
+(`--shadow-*: initial` deletes the utilities), no gradients, wordmark as an
+image asset only — never typeset "Halda".
+
+The nav uses a supplied **Halda Maptappers** lockup, `public/halda-maptappers.png`.
+It arrived as white glyphs on a black band inside a white page; the checked-in
+copy is cropped to the glyphs with the luminance moved into the alpha channel, so
+it composites on any dark surface without a visible box. Re-cropping it from the
+original means redoing that — a plain `-transparent black` leaves grey fringes.
+Note this is a *modified* wordmark, which the corporate brand rules would not
+allow on outward-facing work.
 
 **One accent per page**, enforced structurally: the page root sets `data-accent`
 and components only reference `bg-accent`/`border-accent`, so no component can

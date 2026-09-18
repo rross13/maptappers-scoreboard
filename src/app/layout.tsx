@@ -22,15 +22,17 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       {/* Blue is the default accent; game pages override via data-accent. */}
       <body className="min-h-full flex flex-col bg-ink text-paper">
         <header className="border-b border-surface-raised">
-          <nav className="mx-auto w-full max-w-5xl px-4 py-4 flex items-center gap-6">
+          <nav className="mx-auto w-full max-w-5xl px-4 py-4 flex flex-wrap items-center gap-x-6 gap-y-3">
             <Link href="/" className="shrink-0">
-              {/* Official asset. The wordmark is never typeset as text. */}
+              {/* Supplied lockup, background removed so it sits on any dark
+                  surface. Never typeset as text. */}
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="https://assets.halda.ai/brand/HaldaWordmark-White.png"
-                alt="Halda"
-                height={24}
-                className="h-6 w-auto"
+                src="/halda-maptappers.png"
+                alt="Halda Maptappers"
+                width={1056}
+                height={79}
+                className="h-4 w-auto sm:h-5"
               />
             </Link>
             <div className="flex items-center gap-5 text-label">
