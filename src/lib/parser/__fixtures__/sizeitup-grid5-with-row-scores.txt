@@ -1,0 +1,9 @@
+Size It Up
+Overall Score 262
+
+:large_red_square::white_large_square::white_large_square::white_large_square::white_large_square: 24
+:large_red_square::large_red_square::large_red_square::white_large_square::white_large_square: 56
+:white_large_square::white_large_square::white_large_square::white_large_square::white_large_square: 0
+:large_red_square::large_red_square::large_red_square::large_red_square::large_red_square: 100
+:large_red_square::large_red_square::large_red_square::large_red_square::white_large_square: 82
+https://magnitudle.com/size-it-up

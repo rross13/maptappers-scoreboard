@@ -1,0 +1,78 @@
+/* Halda brand typeface. Self-hosted CSS is used rather than Google Fonts because
+   assets.halda.ai is reachable from sandboxed build environments where
+   fonts.googleapis.com is blocked. */
+@import url("https://assets.halda.ai/brand/fonts.css");
+@import "tailwindcss";
+
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", "Lato", Helvetica, sans-serif;
+
+  /* Structural colors. Never counted against the one-accent-per-page rule. */
+  --color-ink: #0d0d0d;
+  --color-surface: #111111;
+  --color-surface-raised: #1a1a1a;
+  --color-paper: #ffffff;
+  /* Brand body-text colour for LIGHT surfaces. Deliberately NOT named
+     --color-body: Tailwind would generate a .text-body COLOUR utility from
+     it that collides with the --text-body size token below, and colour wins
+     — leaving #333 text on a #111 card at about 1.4:1 contrast. This app is
+     dark throughout, so the token is kept for completeness only. */
+  --color-on-light: #333333;
+  --color-muted: #666666;
+
+  /* The four brand accents. A page may use exactly one; game pills are the
+     single sanctioned exception (visual-identity.md lines 204, 310). */
+  --color-blue: #4fabff;
+  --color-purple: #907fff;
+  --color-yellow: #ffdf44;
+  --color-coral: #fe8576;
+
+  --radius-card: 1.25rem;
+  --radius-tile: 0.875rem;
+  --radius-pill: 9999px;
+
+  /* Hard caps from the brand. Stat sizes are for numbers inside cards only. */
+  --text-stat: 3.5rem;
+  --text-title: 2rem;
+  --text-lead: 1.125rem;
+  --text-body: 1rem;
+  --text-label: 0.8125rem;
+  --text-pill: 0.6875rem;
+
+  /* The brand forbids shadows, so the utilities are removed outright. */
+  --shadow-*: initial;
+}
+
+@layer base {
+  :root {
+    --accent: var(--color-blue);
+  }
+  [data-accent="purple"] {
+    --accent: var(--color-purple);
+  }
+  [data-accent="yellow"] {
+    --accent: var(--color-yellow);
+  }
+  [data-accent="coral"] {
+    --accent: var(--color-coral);
+  }
+  /* Fermi: four accents cannot cover five games, so the fifth is monochrome. */
+  [data-accent="mono"] {
+    --accent: var(--color-paper);
+  }
+
+  html {
+    background-color: var(--color-ink);
+  }
+
+  body {
+    background-color: var(--color-ink);
+    color: var(--color-paper);
+    font-family: var(--font-sans);
+  }
+}
+
+@theme inline {
+  --color-accent: var(--accent);
+}
