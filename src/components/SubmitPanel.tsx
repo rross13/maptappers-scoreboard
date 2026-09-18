@@ -69,7 +69,9 @@ export function SubmitPanel({ roster }: { roster: RosterEntry[] }) {
         onChange={(e) => setText(e.target.value)}
         rows={8}
         placeholder="Paste your score here — any game, or all of them at once."
-        className="w-full rounded-card bg-surface text-paper text-body p-4 font-mono border border-surface-raised focus:border-accent outline-none resize-y"
+        // bg-ink, not bg-surface: the panel sits on a bg-surface dialog card, so
+        // the paste box has to read as an inset well against it.
+        className="w-full rounded-card bg-ink text-paper text-body p-4 font-mono border border-surface-raised focus:border-accent outline-none resize-y"
       />
 
       {preview && <Preview result={preview} />}

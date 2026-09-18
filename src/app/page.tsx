@@ -1,12 +1,12 @@
-import { SubmitPanel } from "@/components/SubmitPanel";
-import { DarkCard, GamePill, SectionTitle } from "@/components/brand";
+import { SubmitModal } from "@/components/SubmitModal";
+import { DarkCard, GamePill } from "@/components/brand";
 import { DAILY_GAMES } from "@/lib/games/config";
 import { getPlayers, getScores } from "@/lib/queries";
 import { civilDateIn, SCOREBOARD_TZ } from "@/lib/parser/dates";
 
 export const dynamic = "force-dynamic";
 
-export default async function SubmitPage() {
+export default async function TodayPage() {
   const today = civilDateIn(new Date(), SCOREBOARD_TZ);
   const [roster, todayScores] = await Promise.all([
     getPlayers(),
@@ -18,17 +18,12 @@ export default async function SubmitPage() {
   return (
     <div className="space-y-12">
       <section>
-        <h1 className="text-title font-extrabold mb-2">Submit a score</h1>
-        <p className="text-body text-muted mb-6">
-          Paste the share text from any game. Several at once is fine.
-        </p>
-        <SubmitPanel
-          roster={roster.map((p) => ({ id: p.id, displayName: p.displayName }))}
-        />
-      </section>
-
-      <section>
-        <SectionTitle>Today &middot; {today}</SectionTitle>
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+          <h1 className="text-title font-extrabold">Today &middot; {today}</h1>
+          <SubmitModal
+            roster={roster.map((p) => ({ id: p.id, displayName: p.displayName }))}
+          />
+        </div>
         <DarkCard className="overflow-x-auto p-0">
           <table className="w-full text-body border-collapse">
             <thead>

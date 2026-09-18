@@ -25,7 +25,7 @@ src/lib/games/config.ts   direction, transform, bounds, accent — the config co
 src/lib/queries.ts    DB reads + saveEntry (carries `server-only`)
 src/lib/standings.ts  range/metric parsing, slot building (carries `server-only`)
 src/db/schema.ts      Drizzle schema
-src/app/              App Router; server components except SubmitPanel + toggles
+src/app/              App Router; server components except SubmitModal/Panel + toggles
 scripts/              seed · backfill · verify-scoring · build-history.py
 ```
 
@@ -190,6 +190,13 @@ it composites on any dark surface without a visible box. Re-cropping it from the
 original means redoing that — a plain `-transparent black` leaves grey fringes.
 Note this is a *modified* wordmark, which the corporate brand rules would not
 allow on outward-facing work.
+
+`/` is the day's board, and submitting happens in a dialog behind its
+"Submit scores" button. `SubmitModal` uses the native `<dialog>`, so focus
+trapping, Esc-to-close and inerting the page come from the platform — don't
+replace it with a div and hand-rolled key handlers. It deliberately stays open
+after a save, because the result list is the only confirmation of what was
+stored; the board behind it has already revalidated.
 
 **One accent per page**, enforced structurally: the page root sets `data-accent`
 and components only reference `bg-accent`/`border-accent`, so no component can

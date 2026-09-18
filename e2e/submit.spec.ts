@@ -13,6 +13,7 @@ Final score: 866`;
 
 test("paste a MapTap score, save it, and see it on the leaderboard", async ({ page }) => {
   await page.goto("/");
+  await page.getByRole("button", { name: "Submit scores" }).click();
 
   await page.selectOption("#player", { label: "Weston Watson" });
   await page.fill("textarea", MAPTAP);
@@ -22,7 +23,7 @@ test("paste a MapTap score, save it, and see it on the leaderboard", async ({ pa
   await expect(preview).toBeVisible();
   await expect(page.locator("text=2026-09-01")).toBeVisible();
 
-  await page.getByRole("button", { name: "Submit" }).click();
+  await page.getByRole("button", { name: "Submit", exact: true }).click();
   await expect(page.locator("text=/Saved MapTap 866 for 2026-09-01/")).toBeVisible();
 
   await page.goto("/games/maptap?range=all");
@@ -33,8 +34,10 @@ test("paste a MapTap score, save it, and see it on the leaderboard", async ({ pa
 
 test("remembers the selected player across a reload", async ({ page }) => {
   await page.goto("/");
+  await page.getByRole("button", { name: "Submit scores" }).click();
   await page.selectOption("#player", { label: "Owen" });
   await page.reload();
+  await page.getByRole("button", { name: "Submit scores" }).click();
   await expect(page.locator("#player")).toHaveValue(
     await page.locator("#player option", { hasText: "Owen" }).getAttribute("value") ?? "",
   );
@@ -42,8 +45,11 @@ test("remembers the selected player across a reload", async ({ page }) => {
 
 test("rejects a paste with no recognizable game", async ({ page }) => {
   await page.goto("/");
+  await page.getByRole("button", { name: "Submit scores" }).click();
   await page.selectOption("#player", { label: "Owen" });
   await page.fill("textarea", "lol that was rough today");
   await expect(page.locator("text=No game recognized yet")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Submit" })).toBeDisabled();
+  await expect(
+    page.getByRole("button", { name: "Submit", exact: true }),
+  ).toBeDisabled();
 });
