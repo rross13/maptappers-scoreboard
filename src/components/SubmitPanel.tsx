@@ -3,7 +3,13 @@
 import { useMemo, useState, useSyncExternalStore, useTransition } from "react";
 import { parsePaste, SCOREBOARD_TZ, type ParseResult } from "@/lib/parser";
 import { submitScore, type SubmitState } from "@/app/actions/scores";
-import { DAILY_GAMES, GAMES, type GameSlug } from "@/lib/games/config";
+import { gameTabClass } from "@/components/brand";
+import {
+  DAILY_GAMES,
+  formatScore,
+  GAMES,
+  type GameSlug,
+} from "@/lib/games/config";
 import {
   getServerSnapshot,
   getSnapshot,
@@ -16,8 +22,15 @@ export interface RosterEntry {
   displayName: string;
 }
 
-/** What was saved this session, per game, for the confirmation list. */
-type SavedMap = Partial<Record<GameSlug, string>>;
+/** A score already on record for today, from the server or from this session. */
+export interface ExistingScore {
+  score: number;
+  puzzleDate: string;
+  /** Absent for a save made in this session; the page carries it after a refresh. */
+  revisions?: number;
+}
+
+type SavedMap = Partial<Record<GameSlug, ExistingScore>>;
 
 /**
  * One tab per daily game, one submission per tab.
@@ -28,13 +41,29 @@ type SavedMap = Partial<Record<GameSlug, string>>;
  * Globle". A tab switch clears the box, because each tab is its own submission;
  * the one exception is the "switch to X" button on a wrong-tab paste, which
  * carries the text over rather than making the user paste it twice.
+ *
+ * A game you have already logged today opens locked, showing what is on record.
+ * "Replace it" unlocks the box rather than the score being uneditable: the
+ * schema keeps the old value in `score_revisions`, and a mis-pasted score whose
+ * only remedy is a manual DB edit is a score nobody ever fixes.
  */
-export function SubmitPanel({ roster }: { roster: RosterEntry[] }) {
+export function SubmitPanel({
+  roster,
+  existing,
+  today,
+}: {
+  roster: RosterEntry[];
+  /** Today's scores keyed by player, then game. */
+  existing: Record<string, Partial<Record<string, ExistingScore>>>;
+  /** The scoreboard's civil date, computed on the server. */
+  today: string;
+}) {
   const stored = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const [active, setActive] = useState<GameSlug>(DAILY_GAMES[0].slug);
   const [text, setText] = useState("");
   const [state, setState] = useState<SubmitState | null>(null);
   const [saved, setSaved] = useState<SavedMap>({});
+  const [replacing, setReplacing] = useState<GameSlug | null>(null);
   const [pending, startTransition] = useTransition();
 
   // A remembered id that is no longer on the roster falls back to unselected.
@@ -47,6 +76,18 @@ export function SubmitPanel({ roster }: { roster: RosterEntry[] }) {
     [text],
   );
 
+  // This session's saves win over the server map: a revalidation may not have
+  // landed yet, and either way the newer one is ours. Only a save *for today*
+  // locks a tab — backdating yesterday's Globle must not block today's.
+  const onRecord = (g: GameSlug): ExistingScore | null => {
+    const here = saved[g];
+    if (here && here.puzzleDate === today) return here;
+    return playerId ? existing[playerId]?.[g] ?? null : null;
+  };
+
+  const recorded = onRecord(active);
+  const locked = recorded !== null && replacing !== active;
+
   const mine = preview?.entries.filter((e) => e.game === active) ?? [];
   const elsewhere = preview?.entries.filter((e) => e.game !== active) ?? [];
   const failures = preview?.failures.filter((f) => f.game === active) ?? [];
@@ -56,6 +97,7 @@ export function SubmitPanel({ roster }: { roster: RosterEntry[] }) {
     if (game === active) return;
     setActive(game);
     setState(null);
+    setReplacing(null);
     if (!keepText) setText("");
   }
 
@@ -66,15 +108,19 @@ export function SubmitPanel({ roster }: { roster: RosterEntry[] }) {
       setState(result);
       if (!result.ok) return;
 
+      const [first] = result.saved;
       const next: SavedMap = {
         ...saved,
-        [game]: result.saved
-          .map((s) => `${s.score} · ${s.puzzleDate}`)
-          .join(", "),
+        [game]: { score: first.score, puzzleDate: first.puzzleDate },
       };
       setSaved(next);
       setText("");
-      const advance = nextUnlogged(game, next);
+      setReplacing(null);
+      const advance = nextUnlogged(game, (g) => {
+        const here = next[g];
+        if (here && here.puzzleDate === today) return true;
+        return Boolean(playerId && existing[playerId]?.[g]);
+      });
       if (advance) {
         setActive(advance);
         setState(null);
@@ -103,9 +149,8 @@ export function SubmitPanel({ roster }: { roster: RosterEntry[] }) {
         </select>
       </div>
 
-      {/* Game pills double as the tab strip. Each button carries its own
-          data-accent, which is what lets five accents coexist here without
-          breaking one-accent-per-page: pills are the sanctioned exception. */}
+      {/* Same strip as the per-game pages, but these switch tabs rather than
+          pages — see gameTabClass. */}
       <div role="tablist" aria-label="Game" className="flex flex-wrap gap-2">
         {DAILY_GAMES.map((g) => {
           const on = g.slug === active;
@@ -118,14 +163,10 @@ export function SubmitPanel({ roster }: { roster: RosterEntry[] }) {
               aria-selected={on}
               data-accent={g.accent}
               onClick={() => selectGame(g.slug)}
-              className={`rounded-pill text-label font-bold px-3.5 py-1.5 transition-colors ${
-                on
-                  ? "bg-accent text-ink"
-                  : "bg-surface-raised text-muted hover:text-paper"
-              }`}
+              className={gameTabClass(on)}
             >
               {g.name}
-              {saved[g.slug] && <span aria-hidden> &#10003;</span>}
+              {onRecord(g.slug) && <span aria-hidden> &#10003;</span>}
             </button>
           );
         })}
@@ -151,16 +192,25 @@ export function SubmitPanel({ roster }: { roster: RosterEntry[] }) {
         </div>
 
         <textarea
-          value={text}
+          value={locked ? "" : text}
           onChange={(e) => setText(e.target.value)}
+          disabled={locked}
           rows={7}
-          placeholder={`Paste your ${cfg.name} share text here.`}
+          placeholder={
+            locked
+              ? `Already logged for today.`
+              : `Paste your ${cfg.name} share text here.`
+          }
           // bg-ink, not bg-surface: the panel sits on a bg-surface dialog card,
           // so the paste box has to read as an inset well against it.
-          className="w-full rounded-card bg-ink text-paper text-body p-4 font-mono border border-surface-raised focus:border-accent outline-none resize-y"
+          className="w-full rounded-card bg-ink text-paper text-body p-4 font-mono border border-surface-raised focus:border-accent outline-none resize-y disabled:opacity-50 disabled:cursor-not-allowed"
         />
 
-        {preview && (
+        {/* The score on record reads like a parsed preview, because it is the
+            same fact at a later moment. */}
+        {recorded && <OnRecord game={active} score={recorded} />}
+
+        {!locked && preview && (
           <Preview
             game={active}
             mine={mine}
@@ -171,15 +221,25 @@ export function SubmitPanel({ roster }: { roster: RosterEntry[] }) {
         )}
 
         <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={() => onSubmit(false)}
-            disabled={pending || !playerId || mine.length === 0}
-            className="rounded-pill bg-accent text-ink text-body font-bold px-5 py-2.5 disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            {pending ? "Saving…" : "Submit"}
-          </button>
-          {hasLowConfidence && (
+          {locked ? (
+            <button
+              type="button"
+              onClick={() => setReplacing(active)}
+              className="rounded-pill border border-accent text-paper text-body px-5 py-2.5"
+            >
+              Replace it
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => onSubmit(false)}
+              disabled={pending || !playerId || mine.length === 0}
+              className="rounded-pill bg-accent text-ink text-body font-bold px-5 py-2.5 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {pending ? "Saving…" : "Submit"}
+            </button>
+          )}
+          {!locked && hasLowConfidence && (
             <button
               type="button"
               onClick={() => onSubmit(true)}
@@ -194,6 +254,11 @@ export function SubmitPanel({ roster }: { roster: RosterEntry[] }) {
               Pick your name to submit.
             </span>
           )}
+          {replacing === active && (
+            <span className="text-label text-muted">
+              The old score is kept in the history.
+            </span>
+          )}
         </div>
       </div>
 
@@ -203,12 +268,15 @@ export function SubmitPanel({ roster }: { roster: RosterEntry[] }) {
   );
 }
 
-/** The next game with nothing logged this session, wrapping once. */
-function nextUnlogged(from: GameSlug, done: SavedMap): GameSlug | null {
+/** The next game with nothing on record for today, wrapping once. */
+function nextUnlogged(
+  from: GameSlug,
+  isLogged: (game: GameSlug) => boolean,
+): GameSlug | null {
   const i = DAILY_GAMES.findIndex((g) => g.slug === from);
   for (let k = 1; k <= DAILY_GAMES.length; k++) {
     const g = DAILY_GAMES[(i + k) % DAILY_GAMES.length];
-    if (!done[g.slug]) return g.slug;
+    if (!isLogged(g.slug)) return g.slug;
   }
   return null;
 }
@@ -327,6 +395,24 @@ function Elsewhere({
   );
 }
 
+/** The score already stored for today, shown where the parsed preview goes. */
+function OnRecord({ game, score }: { game: GameSlug; score: ExistingScore }) {
+  return (
+    <div className="rounded-tile bg-surface-raised p-4 flex flex-wrap items-center gap-3">
+      <span className="text-body tabular-nums font-bold">
+        {formatScore(game, score.score)}
+      </span>
+      <span className="text-label text-muted">{score.puzzleDate}</span>
+      <span className="text-label text-muted">on record</span>
+      {score.revisions !== undefined && score.revisions > 0 && (
+        <span className="text-label text-muted">
+          edited &times;{score.revisions}
+        </span>
+      )}
+    </div>
+  );
+}
+
 function Problems({ state }: { state: SubmitState }) {
   return (
     <div className="rounded-tile bg-surface-raised p-4 space-y-1">
@@ -344,12 +430,17 @@ function SavedSoFar({ saved }: { saved: SavedMap }) {
   const done = DAILY_GAMES.filter((g) => saved[g.slug]);
   return (
     <div className="rounded-tile bg-surface-raised p-4 space-y-1">
-      {done.map((g) => (
-        <p key={g.slug} className="text-label">
-          <span className="font-bold">Saved {g.name}</span>{" "}
-          <span className="text-muted">{saved[g.slug]}</span>
-        </p>
-      ))}
+      {done.map((g) => {
+        const s = saved[g.slug]!;
+        return (
+          <p key={g.slug} className="text-label">
+            <span className="font-bold">
+              Saved {g.name} {formatScore(g.slug, s.score)}
+            </span>{" "}
+            <span className="text-muted">{s.puzzleDate}</span>
+          </p>
+        );
+      })}
       {done.length === DAILY_GAMES.length && (
         <p className="text-label text-muted pt-1">
           That&rsquo;s all five. Close this to see the board.

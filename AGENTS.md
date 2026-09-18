@@ -233,6 +233,14 @@ Globle line and nothing else — the client's parse is still only a preview.
 Calling it without `onlyGame` keeps the old save-everything behaviour, which the
 backfill wants.
 
+A game already scored for **today** opens locked: the box is disabled and the
+stored value sits where the parsed preview would, so the modal shows one fact in
+one place either way. "Replace it" unlocks it — the schema keeps the old value in
+`score_revisions`, and a mis-pasted score whose only remedy is a manual DB edit
+is a score nobody ever fixes. The lock is date-scoped on purpose: pasting
+yesterday's Globle must not block today's, so a save made in this session only
+locks its tab when its `puzzleDate` matches the server-computed `today`.
+
 A paste that names a different game is neither saved nor silently dropped: the
 panel says what it read and offers that game's tab, and switching that way is the
 one case that carries the text across (an ordinary tab click clears the box,
@@ -242,10 +250,16 @@ The tab strip is built from game pills, each carrying its own `data-accent`.
 That is the sanctioned pill exception to one-accent-per-page — everything else in
 the dialog (Submit, the switch buttons) stays on the page accent.
 
-`GAMES[g].url` is the "Play X" link. Every URL is lifted from the game's own
-share text; **Krillion's share text carries no URL in any observed post**, so
-Krillion has no link. Don't guess one — a wrong link sends the team to a parked
-domain, and `config.test.ts` can only check the shape, not the destination.
+The same strip appears on `/games/[slug]`, where the tabs are links to the other
+games rather than buttons. Both render `gameTabClass()` from `brand.tsx`; the
+mechanics differ, the look must not, so change the classes there and nowhere
+else.
+
+`GAMES[g].url` is the "Play X" link. All but Krillion's are lifted from the URL
+the game's own share text carries; Krillion's share text has none in any observed
+post, so that one came from Riley by hand. Don't guess one — a wrong link sends
+the team to a parked domain, and `config.test.ts` can only check the shape, not
+the destination.
 
 ## Known gaps
 

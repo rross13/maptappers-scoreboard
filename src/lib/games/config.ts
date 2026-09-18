@@ -27,9 +27,10 @@ export interface GameConfig {
   slug: GameSlug;
   name: string;
   /**
-   * Where to play it. Every one of these is lifted from the URL the game's own
-   * share text carries, so none of them is a guess. Krillion's share text has
-   * no URL in any observed post, so it has no link — don't invent one.
+   * Where to play it. All but Krillion's are lifted from the URL the game's own
+   * share text carries; Krillion's share text has no URL in any observed post,
+   * so that one was supplied by hand. Never guess one — nothing in the codebase
+   * can tell a working link from a parked domain.
    */
   url?: string;
   /** 1 = higher score is better, -1 = lower score is better. */
@@ -64,6 +65,7 @@ export const GAMES: Record<GameSlug, GameConfig> = {
   krillion: {
     slug: "krillion",
     name: "Krillion",
+    url: "https://krillion.io/",
     direction: 1,
     transform: "identity",
     precision: 0,
@@ -128,6 +130,12 @@ export const GAMES: Record<GameSlug, GameConfig> = {
 export const DAILY_GAMES: GameConfig[] = GAME_SLUGS.map((s) => GAMES[s]).filter(
   (g) => g.isDaily,
 );
+
+/** Display form for a raw score: the game's precision plus its unit. */
+export function formatScore(game: GameSlug, value: number): string {
+  const cfg = GAMES[game];
+  return value.toFixed(cfg.precision) + (cfg.suffix ?? "");
+}
 
 export function isGameSlug(value: string): value is GameSlug {
   return (GAME_SLUGS as readonly string[]).includes(value);

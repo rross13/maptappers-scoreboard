@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { GAMES, type GameSlug } from "@/lib/games/config";
+import Link from "next/link";
+import { DAILY_GAMES, GAMES, type GameSlug } from "@/lib/games/config";
 
 /**
  * Brand primitives.
@@ -95,4 +96,42 @@ export function SectionTitle({ children }: { children: ReactNode }) {
 
 export function MutedLabel({ children }: { children: ReactNode }) {
   return <span className="text-label text-muted">{children}</span>;
+}
+
+/**
+ * The game tab strip's look, shared by the submit dialog (buttons that switch
+ * tabs) and the per-game pages (links that switch pages). Same strip, two
+ * mechanics — keeping the classes in one place is what stops them drifting.
+ *
+ * Each tab carries its own `data-accent`, which is the sanctioned pill
+ * exception to one-accent-per-page.
+ */
+export function gameTabClass(active: boolean): string {
+  return `rounded-pill text-label font-bold px-3.5 py-1.5 transition-colors ${
+    active
+      ? "bg-accent text-ink"
+      : "bg-surface-raised text-muted hover:text-paper"
+  }`;
+}
+
+/** Game switcher for `/games/[slug]`. Every tab is a link to another page. */
+export function GameTabLinks({ active }: { active: GameSlug }) {
+  return (
+    <nav aria-label="Games" className="flex flex-wrap gap-2">
+      {DAILY_GAMES.map((g) => {
+        const on = g.slug === active;
+        return (
+          <Link
+            key={g.slug}
+            href={`/games/${g.slug}`}
+            data-accent={g.accent}
+            aria-current={on ? "page" : undefined}
+            className={gameTabClass(on)}
+          >
+            {g.name}
+          </Link>
+        );
+      })}
+    </nav>
+  );
 }

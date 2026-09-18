@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { DarkCard, SectionTitle } from "@/components/brand";
+import { DarkCard, GameTabLinks, SectionTitle } from "@/components/brand";
 import { Toggles } from "@/components/Toggles";
 import { GAMES, isGameSlug } from "@/lib/games/config";
 import { getPlayers, getScores } from "@/lib/queries";
@@ -68,7 +68,10 @@ export default async function GamePage({
 
   return (
     <div data-accent={cfg.accent} className="space-y-8">
-      <h1 className="text-title font-extrabold">{cfg.name}</h1>
+      <div className="space-y-4">
+        <GameTabLinks active={cfg.slug} />
+        <h1 className="text-title font-extrabold">{cfg.name}</h1>
+      </div>
 
       <Toggles
         options={RANGES.map((r) => ({ key: r.key, label: r.label }))}

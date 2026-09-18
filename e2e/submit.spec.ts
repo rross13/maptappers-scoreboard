@@ -95,6 +95,34 @@ test("clears the box when you pick a tab yourself", async ({ page }) => {
   await expect(page.locator("textarea")).toHaveValue("");
 });
 
+/**
+ * Depends on the dev database holding a score for today, which the Slack
+ * backfill only provides while "today" is inside its window. Skipping loudly
+ * beats a mystery failure the morning after.
+ */
+test("locks a game you have already logged today", async ({ page }) => {
+  await openSubmit(page);
+  await page.selectOption("#player", { label: "Jackson" });
+
+  const maptap = page.getByRole("tab", { name: /MapTap/ });
+  const logged = ((await maptap.textContent()) ?? "").includes("\u2713");
+  test.skip(!logged, "no MapTap score for today in this database");
+
+  await expect(page.locator("textarea")).toBeDisabled();
+  await expect(page.locator("text=on record")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Submit", exact: true }),
+  ).toHaveCount(0);
+
+  // Replacing is allowed — the old value survives in score_revisions.
+  await page.getByRole("button", { name: "Replace it" }).click();
+  await expect(page.locator("textarea")).toBeEnabled();
+
+  // A game with nothing logged today stays open.
+  await page.getByRole("tab", { name: /Fermi/ }).click();
+  await expect(page.locator("textarea")).toBeEnabled();
+});
+
 test("remembers the selected player across a reload", async ({ page }) => {
   await openSubmit(page);
   await page.selectOption("#player", { label: "Owen" });

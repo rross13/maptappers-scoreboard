@@ -1,7 +1,11 @@
 "use client";
 
 import { useRef } from "react";
-import { SubmitPanel, type RosterEntry } from "@/components/SubmitPanel";
+import {
+  SubmitPanel,
+  type ExistingScore,
+  type RosterEntry,
+} from "@/components/SubmitPanel";
 
 /**
  * The "Submit scores" trigger and the dialog it opens.
@@ -13,7 +17,15 @@ import { SubmitPanel, type RosterEntry } from "@/components/SubmitPanel";
  * the only confirmation the user gets, and the board behind has already
  * revalidated by the time they close it.
  */
-export function SubmitModal({ roster }: { roster: RosterEntry[] }) {
+export function SubmitModal({
+  roster,
+  existing,
+  today,
+}: {
+  roster: RosterEntry[];
+  existing: Record<string, Partial<Record<string, ExistingScore>>>;
+  today: string;
+}) {
   const ref = useRef<HTMLDialogElement>(null);
 
   return (
@@ -56,7 +68,7 @@ export function SubmitModal({ roster }: { roster: RosterEntry[] }) {
             </button>
           </div>
 
-          <SubmitPanel roster={roster} />
+          <SubmitPanel roster={roster} existing={existing} today={today} />
         </div>
       </dialog>
     </>
