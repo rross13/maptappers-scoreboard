@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { DarkCard, GamePill } from "@/components/brand";
+import { DarkCard } from "@/components/brand";
 import { DAILY_GAMES } from "@/lib/games/config";
 
 export default function GamesIndex() {
@@ -10,10 +10,7 @@ export default function GamesIndex() {
         {DAILY_GAMES.map((g) => (
           <Link key={g.slug} href={`/games/${g.slug}`}>
             <DarkCard className="hover:bg-surface-raised transition-colors">
-              <div className="flex items-center gap-3">
-                <GamePill game={g.slug} />
-                <span className="text-lead font-bold">{g.name}</span>
-              </div>
+              <span className="text-lead font-bold">{g.name}</span>
               <p className="text-label text-muted mt-2">
                 {g.direction === 1 ? "Higher is better" : "Lower is better"}
                 {g.max ? ` · max ${g.max}` : ""}

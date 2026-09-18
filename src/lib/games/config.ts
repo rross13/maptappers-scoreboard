@@ -26,8 +26,6 @@ export type Accent = "blue" | "purple" | "yellow" | "coral" | "mono";
 export interface GameConfig {
   slug: GameSlug;
   name: string;
-  /** Short code shown in pills so the board reads without color. */
-  code: string;
   /** 1 = higher score is better, -1 = lower score is better. */
   direction: 1 | -1;
   transform: Transform;
@@ -47,7 +45,6 @@ export const GAMES: Record<GameSlug, GameConfig> = {
   maptap: {
     slug: "maptap",
     name: "MapTap",
-    code: "MT",
     direction: 1,
     transform: "identity",
     precision: 0,
@@ -60,7 +57,6 @@ export const GAMES: Record<GameSlug, GameConfig> = {
   krillion: {
     slug: "krillion",
     name: "Krillion",
-    code: "KR",
     direction: 1,
     transform: "identity",
     precision: 0,
@@ -71,7 +67,6 @@ export const GAMES: Record<GameSlug, GameConfig> = {
   size_it_up: {
     slug: "size_it_up",
     name: "Size It Up",
-    code: "SIU",
     direction: 1,
     transform: "identity",
     precision: 0,
@@ -84,7 +79,6 @@ export const GAMES: Record<GameSlug, GameConfig> = {
   globle: {
     slug: "globle",
     name: "Globle",
-    code: "GL",
     direction: -1,
     transform: "identity",
     precision: 0,
@@ -95,7 +89,6 @@ export const GAMES: Record<GameSlug, GameConfig> = {
   fermi: {
     slug: "fermi",
     name: "Fermi",
-    code: "FE",
     direction: -1,
     // Observed range is 1.25x to 349x. On a raw scale one huge outlier compresses
     // every real performance into an indistinguishable clump; log10 spreads them
@@ -110,7 +103,6 @@ export const GAMES: Record<GameSlug, GameConfig> = {
   krillion_infinite: {
     slug: "krillion_infinite",
     name: "Krillion ∞",
-    code: "KR∞",
     direction: 1,
     transform: "identity",
     precision: 0,

@@ -126,10 +126,7 @@ export default async function PlayerPage({
               {perGame.map((r) => (
                 <tr key={r.game.slug} className="border-t border-surface-raised">
                   <td className="p-4">
-                    <span className="flex items-center gap-2">
-                      <GamePill game={r.game.slug} />
-                      {r.game.name}
-                    </span>
+                    <GamePill game={r.game.slug} />
                   </td>
                   <td className="p-4 text-right tabular-nums">
                     {r.avgZ === null ? "—" : fmt(r.avgZ)}

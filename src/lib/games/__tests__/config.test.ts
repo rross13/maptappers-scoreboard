@@ -8,11 +8,9 @@ describe("game config", () => {
     for (const slug of GAME_SLUGS) expect(GAMES[slug].slug).toBe(slug);
   });
 
-  it("uses unique display names and codes", () => {
+  it("uses unique display names", () => {
     const names = GAME_SLUGS.map((s) => GAMES[s].name);
-    const codes = GAME_SLUGS.map((s) => GAMES[s].code);
     expect(new Set(names).size).toBe(names.length);
-    expect(new Set(codes).size).toBe(codes.length);
   });
 
   it("marks exactly the two lower-is-better games", () => {

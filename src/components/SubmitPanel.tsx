@@ -118,7 +118,6 @@ function Preview({ result }: { result: ParseResult }) {
           className="rounded-tile bg-surface-raised p-4 flex flex-wrap items-center gap-3"
         >
           <GamePill game={e.game as GameSlug} />
-          <span className="text-body font-bold">{e.displayName}</span>
           <span className="text-body tabular-nums">{e.score}</span>
           <span className="text-label text-muted">{e.puzzleDate}</span>
           {e.dateConfidence !== "high" && (

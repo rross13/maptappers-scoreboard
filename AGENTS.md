@@ -193,8 +193,8 @@ Two findings worth not rediscovering:
 **The four brand accents fail a categorical colorblind check as a set.** Blue and
 purple sit at ΔE 12.3 in *normal* vision (floor is 15) and 6.3 under deutan —
 verified with the `dataviz` skill's validator, not by eye. The hexes are fixed by
-the brand, so game identity is **never carried by colour alone**: every pill has a
-short code (MT/KR/SIU/GL/FE), column order is fixed, and no chart maps games to
+the brand, so game identity is **never carried by colour alone**: every pill spells
+the game out in full, column order is fixed, and no chart maps games to
 colours. Sparklines are single-series for this reason. Don't add a multi-series
 chart coloured by game.
 

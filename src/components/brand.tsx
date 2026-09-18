@@ -68,7 +68,7 @@ const PILL_BG: Record<string, string> = {
 /**
  * Game identity badge. Pills are the one sanctioned exception to
  * one-accent-per-page, so several may appear together on a multi-game page.
- * The short code carries the same information without relying on color.
+ * The pill spells the game out, so identity never rests on color alone.
  */
 export function GamePill({
   game,
@@ -82,7 +82,7 @@ export function GamePill({
     <span
       className={`rounded-pill ${PILL_BG[cfg.accent]} text-ink text-pill font-bold px-2.5 py-1 inline-flex items-center gap-1.5 whitespace-nowrap ${className}`}
     >
-      {cfg.code}
+      {cfg.name}
     </span>
   );
 }
