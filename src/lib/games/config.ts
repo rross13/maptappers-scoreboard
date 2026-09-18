@@ -26,6 +26,12 @@ export type Accent = "blue" | "purple" | "yellow" | "coral" | "mono";
 export interface GameConfig {
   slug: GameSlug;
   name: string;
+  /**
+   * Where to play it. Every one of these is lifted from the URL the game's own
+   * share text carries, so none of them is a guess. Krillion's share text has
+   * no URL in any observed post, so it has no link — don't invent one.
+   */
+  url?: string;
   /** 1 = higher score is better, -1 = lower score is better. */
   direction: 1 | -1;
   transform: Transform;
@@ -45,6 +51,7 @@ export const GAMES: Record<GameSlug, GameConfig> = {
   maptap: {
     slug: "maptap",
     name: "MapTap",
+    url: "https://www.maptap.gg",
     direction: 1,
     transform: "identity",
     precision: 0,
@@ -67,6 +74,7 @@ export const GAMES: Record<GameSlug, GameConfig> = {
   size_it_up: {
     slug: "size_it_up",
     name: "Size It Up",
+    url: "https://magnitudle.com/size-it-up",
     direction: 1,
     transform: "identity",
     precision: 0,
@@ -79,6 +87,7 @@ export const GAMES: Record<GameSlug, GameConfig> = {
   globle: {
     slug: "globle",
     name: "Globle",
+    url: "https://globle-game.com",
     direction: -1,
     transform: "identity",
     precision: 0,
@@ -89,6 +98,7 @@ export const GAMES: Record<GameSlug, GameConfig> = {
   fermi: {
     slug: "fermi",
     name: "Fermi",
+    url: "https://fermi.gg/s/daily",
     direction: -1,
     // Observed range is 1.25x to 349x. On a raw scale one huge outlier compresses
     // every real performance into an indistinguishable clump; log10 spreads them

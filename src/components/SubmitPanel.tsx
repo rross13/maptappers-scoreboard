@@ -3,8 +3,7 @@
 import { useMemo, useState, useSyncExternalStore, useTransition } from "react";
 import { parsePaste, SCOREBOARD_TZ, type ParseResult } from "@/lib/parser";
 import { submitScore, type SubmitState } from "@/app/actions/scores";
-import { GamePill } from "@/components/brand";
-import type { GameSlug } from "@/lib/games/config";
+import { DAILY_GAMES, GAMES, type GameSlug } from "@/lib/games/config";
 import {
   getServerSnapshot,
   getSnapshot,
@@ -17,14 +16,30 @@ export interface RosterEntry {
   displayName: string;
 }
 
+/** What was saved this session, per game, for the confirmation list. */
+type SavedMap = Partial<Record<GameSlug, string>>;
+
+/**
+ * One tab per daily game, one submission per tab.
+ *
+ * Submitting advances to the next game still unlogged in this session, so the
+ * common case — play all five, paste each as you go — is a straight walk with no
+ * extra clicks, while clicking a tab directly handles "I only came to fix
+ * Globle". A tab switch clears the box, because each tab is its own submission;
+ * the one exception is the "switch to X" button on a wrong-tab paste, which
+ * carries the text over rather than making the user paste it twice.
+ */
 export function SubmitPanel({ roster }: { roster: RosterEntry[] }) {
   const stored = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const [active, setActive] = useState<GameSlug>(DAILY_GAMES[0].slug);
   const [text, setText] = useState("");
   const [state, setState] = useState<SubmitState | null>(null);
+  const [saved, setSaved] = useState<SavedMap>({});
   const [pending, startTransition] = useTransition();
 
   // A remembered id that is no longer on the roster falls back to unselected.
   const playerId = roster.some((p) => p.id === stored) ? stored : "";
+  const cfg = GAMES[active];
 
   // Same parser as the server, so the preview cannot disagree with what is saved.
   const preview: ParseResult | null = useMemo(
@@ -32,14 +47,38 @@ export function SubmitPanel({ roster }: { roster: RosterEntry[] }) {
     [text],
   );
 
-  const hasLowConfidence =
-    preview?.entries.some((e) => e.scoreConfidence === "low") ?? false;
+  const mine = preview?.entries.filter((e) => e.game === active) ?? [];
+  const elsewhere = preview?.entries.filter((e) => e.game !== active) ?? [];
+  const failures = preview?.failures.filter((f) => f.game === active) ?? [];
+  const hasLowConfidence = mine.some((e) => e.scoreConfidence === "low");
+
+  function selectGame(game: GameSlug, keepText = false) {
+    if (game === active) return;
+    setActive(game);
+    setState(null);
+    if (!keepText) setText("");
+  }
 
   function onSubmit(acceptLowConfidence: boolean) {
+    const game = active;
     startTransition(async () => {
-      const result = await submitScore(playerId, text, acceptLowConfidence);
+      const result = await submitScore(playerId, text, acceptLowConfidence, game);
       setState(result);
-      if (result.ok) setText("");
+      if (!result.ok) return;
+
+      const next: SavedMap = {
+        ...saved,
+        [game]: result.saved
+          .map((s) => `${s.score} · ${s.puzzleDate}`)
+          .join(", "),
+      };
+      setSaved(next);
+      setText("");
+      const advance = nextUnlogged(game, next);
+      if (advance) {
+        setActive(advance);
+        setState(null);
+      }
     });
   }
 
@@ -64,63 +103,137 @@ export function SubmitPanel({ roster }: { roster: RosterEntry[] }) {
         </select>
       </div>
 
-      <textarea
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        rows={8}
-        placeholder="Paste your score here — any game, or all of them at once."
-        // bg-ink, not bg-surface: the panel sits on a bg-surface dialog card, so
-        // the paste box has to read as an inset well against it.
-        className="w-full rounded-card bg-ink text-paper text-body p-4 font-mono border border-surface-raised focus:border-accent outline-none resize-y"
-      />
-
-      {preview && <Preview result={preview} />}
-
-      <div className="flex flex-wrap items-center gap-3">
-        <button
-          onClick={() => onSubmit(false)}
-          disabled={pending || !playerId || !preview?.entries.length}
-          className="rounded-pill bg-accent text-ink text-body font-bold px-5 py-2.5 disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          {pending ? "Saving…" : "Submit"}
-        </button>
-        {hasLowConfidence && (
-          <button
-            onClick={() => onSubmit(true)}
-            disabled={pending || !playerId}
-            className="rounded-pill border border-accent text-paper text-body px-5 py-2.5 disabled:opacity-40"
-          >
-            Confirm &amp; save the uncertain one
-          </button>
-        )}
-        {!playerId && (
-          <span className="text-label text-muted">Pick your name to submit.</span>
-        )}
+      {/* Game pills double as the tab strip. Each button carries its own
+          data-accent, which is what lets five accents coexist here without
+          breaking one-accent-per-page: pills are the sanctioned exception. */}
+      <div role="tablist" aria-label="Game" className="flex flex-wrap gap-2">
+        {DAILY_GAMES.map((g) => {
+          const on = g.slug === active;
+          return (
+            <button
+              key={g.slug}
+              type="button"
+              role="tab"
+              id={`tab-${g.slug}`}
+              aria-selected={on}
+              data-accent={g.accent}
+              onClick={() => selectGame(g.slug)}
+              className={`rounded-pill text-label font-bold px-3.5 py-1.5 transition-colors ${
+                on
+                  ? "bg-accent text-ink"
+                  : "bg-surface-raised text-muted hover:text-paper"
+              }`}
+            >
+              {g.name}
+              {saved[g.slug] && <span aria-hidden> &#10003;</span>}
+            </button>
+          );
+        })}
       </div>
 
-      {state && <Result state={state} />}
+      <div
+        role="tabpanel"
+        aria-labelledby={`tab-${active}`}
+        className="space-y-5"
+      >
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <h3 className="text-lead font-bold">{cfg.name}</h3>
+          {cfg.url && (
+            <a
+              href={cfg.url}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="text-label text-muted hover:text-paper underline underline-offset-4"
+            >
+              Play {cfg.name} &#8599;
+            </a>
+          )}
+        </div>
+
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          rows={7}
+          placeholder={`Paste your ${cfg.name} share text here.`}
+          // bg-ink, not bg-surface: the panel sits on a bg-surface dialog card,
+          // so the paste box has to read as an inset well against it.
+          className="w-full rounded-card bg-ink text-paper text-body p-4 font-mono border border-surface-raised focus:border-accent outline-none resize-y"
+        />
+
+        {preview && (
+          <Preview
+            game={active}
+            mine={mine}
+            elsewhere={elsewhere}
+            failures={failures}
+            onSwitch={(g) => selectGame(g, true)}
+          />
+        )}
+
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => onSubmit(false)}
+            disabled={pending || !playerId || mine.length === 0}
+            className="rounded-pill bg-accent text-ink text-body font-bold px-5 py-2.5 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            {pending ? "Saving…" : "Submit"}
+          </button>
+          {hasLowConfidence && (
+            <button
+              type="button"
+              onClick={() => onSubmit(true)}
+              disabled={pending || !playerId}
+              className="rounded-pill border border-accent text-paper text-body px-5 py-2.5 disabled:opacity-40"
+            >
+              Confirm &amp; save the uncertain one
+            </button>
+          )}
+          {!playerId && (
+            <span className="text-label text-muted">
+              Pick your name to submit.
+            </span>
+          )}
+        </div>
+      </div>
+
+      {state && !state.ok && <Problems state={state} />}
+      {Object.keys(saved).length > 0 && <SavedSoFar saved={saved} />}
     </div>
   );
 }
 
-function Preview({ result }: { result: ParseResult }) {
-  if (result.status === "empty" && result.failures.length === 0) {
-    return (
-      <p className="text-label text-muted">
-        No game recognized yet — keep pasting.
-      </p>
-    );
+/** The next game with nothing logged this session, wrapping once. */
+function nextUnlogged(from: GameSlug, done: SavedMap): GameSlug | null {
+  const i = DAILY_GAMES.findIndex((g) => g.slug === from);
+  for (let k = 1; k <= DAILY_GAMES.length; k++) {
+    const g = DAILY_GAMES[(i + k) % DAILY_GAMES.length];
+    if (!done[g.slug]) return g.slug;
   }
+  return null;
+}
 
+function Preview({
+  game,
+  mine,
+  elsewhere,
+  failures,
+  onSwitch,
+}: {
+  game: GameSlug;
+  mine: ParseResult["entries"];
+  elsewhere: ParseResult["entries"];
+  failures: ParseResult["failures"];
+  onSwitch: (game: GameSlug) => void;
+}) {
   return (
     <div className="space-y-3">
-      {result.entries.map((e, i) => (
+      {mine.map((e, i) => (
         <div
           key={`${e.game}-${i}`}
           className="rounded-tile bg-surface-raised p-4 flex flex-wrap items-center gap-3"
         >
-          <GamePill game={e.game as GameSlug} />
-          <span className="text-body tabular-nums">{e.score}</span>
+          <span className="text-body tabular-nums font-bold">{e.score}</span>
           <span className="text-label text-muted">{e.puzzleDate}</span>
           {e.dateConfidence !== "high" && (
             <span className="text-label text-muted">(date assumed)</span>
@@ -136,37 +249,118 @@ function Preview({ result }: { result: ParseResult }) {
         </div>
       ))}
 
-      {result.failures.map((f, i) => (
+      {failures.map((f, i) => (
         <div key={`f-${i}`} className="rounded-tile bg-surface-raised p-4">
-          <span className="text-body font-bold">{f.displayName}</span>
           {f.issues.map((iss, k) => (
-            <p key={k} className="text-label text-muted mt-1">
+            <p key={k} className="text-label text-muted">
               {iss.message}
             </p>
           ))}
         </div>
       ))}
+
+      {mine.length === 0 && failures.length === 0 && elsewhere.length === 0 && (
+        <p className="text-label text-muted">
+          No {GAMES[game].name} score in there yet — keep pasting.
+        </p>
+      )}
+
+      {elsewhere.length > 0 && (
+        <Elsewhere
+          found={elsewhere}
+          kept={mine.length > 0}
+          game={game}
+          onSwitch={onSwitch}
+        />
+      )}
     </div>
   );
 }
 
-function Result({ state }: { state: SubmitState }) {
+/**
+ * A paste can name a game other than the open tab — the usual slip is copying a
+ * whole Slack message. Say what was seen and offer the tab, rather than silently
+ * saving it or silently dropping it.
+ */
+function Elsewhere({
+  found,
+  kept,
+  game,
+  onSwitch,
+}: {
+  found: ParseResult["entries"];
+  kept: boolean;
+  game: GameSlug;
+  onSwitch: (game: GameSlug) => void;
+}) {
+  const slugs = [...new Set(found.map((e) => e.game))];
+  const tabbed = slugs.filter((s) => GAMES[s].isDaily);
+  const untabbed = slugs.filter((s) => !GAMES[s].isDaily);
+
+  return (
+    <div className="rounded-tile bg-surface-raised p-4 space-y-3">
+      <p className="text-label text-muted">
+        {kept
+          ? `Also found ${list(slugs)} in that paste. Only the ${GAMES[game].name} score saves here.`
+          : `That reads as ${list(slugs)}, not ${GAMES[game].name}.`}
+      </p>
+      {tabbed.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {tabbed.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => onSwitch(s)}
+              className="rounded-pill border border-accent text-paper text-label px-3.5 py-1.5"
+            >
+              Switch to {GAMES[s].name}
+            </button>
+          ))}
+        </div>
+      )}
+      {untabbed.length > 0 && (
+        <p className="text-label text-muted">
+          {list(untabbed)} has no tab — it isn&rsquo;t part of the daily board.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function Problems({ state }: { state: SubmitState }) {
   return (
     <div className="rounded-tile bg-surface-raised p-4 space-y-1">
-      {state.saved.map((s, i) => (
-        <p key={i} className="text-body">
-          Saved {s.displayName} {s.score} for {s.puzzleDate}
-          {s.replaced !== null && (
-            <span className="text-muted"> — replaced {s.replaced}</span>
-          )}
-        </p>
-      ))}
       {state.problems.map((p, i) => (
-        <p key={`p-${i}`} className="text-label text-muted">
+        <p key={i} className="text-label text-muted">
           {p}
         </p>
       ))}
       {state.message && <p className="text-label text-muted">{state.message}</p>}
     </div>
   );
+}
+
+function SavedSoFar({ saved }: { saved: SavedMap }) {
+  const done = DAILY_GAMES.filter((g) => saved[g.slug]);
+  return (
+    <div className="rounded-tile bg-surface-raised p-4 space-y-1">
+      {done.map((g) => (
+        <p key={g.slug} className="text-label">
+          <span className="font-bold">Saved {g.name}</span>{" "}
+          <span className="text-muted">{saved[g.slug]}</span>
+        </p>
+      ))}
+      {done.length === DAILY_GAMES.length && (
+        <p className="text-label text-muted pt-1">
+          That&rsquo;s all five. Close this to see the board.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function list(slugs: GameSlug[]): string {
+  const names = slugs.map((s) => GAMES[s].name);
+  if (names.length === 1) return names[0];
+  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
 }

@@ -221,6 +221,32 @@ whole app. The colour token is now `--color-on-light`.
 Fermi's page is monochrome: four accents can't cover five games, and it's already
 the odd one out (log scale, float multiplier), so that reads as intent.
 
+## Submit flow
+
+One tab per daily game, one save per tab. Submitting advances to the next game
+with nothing logged *this session*, so playing all five and pasting as you go is
+a straight walk; clicking a tab directly covers "I only came to fix Globle".
+
+`submitScore` takes an `onlyGame` argument and the tab supplies it, so scoping
+happens on the server. Pasting a whole Slack message on the Globle tab saves the
+Globle line and nothing else — the client's parse is still only a preview.
+Calling it without `onlyGame` keeps the old save-everything behaviour, which the
+backfill wants.
+
+A paste that names a different game is neither saved nor silently dropped: the
+panel says what it read and offers that game's tab, and switching that way is the
+one case that carries the text across (an ordinary tab click clears the box,
+because each tab is its own submission).
+
+The tab strip is built from game pills, each carrying its own `data-accent`.
+That is the sanctioned pill exception to one-accent-per-page — everything else in
+the dialog (Submit, the switch buttons) stays on the page accent.
+
+`GAMES[g].url` is the "Play X" link. Every URL is lifted from the game's own
+share text; **Krillion's share text carries no URL in any observed post**, so
+Krillion has no link. Don't guess one — a wrong link sends the team to a parked
+domain, and `config.test.ts` can only check the shape, not the destination.
+
 ## Known gaps
 
 - **MapTap's score formula is unknown.** `99+80+93+80+89 = 441` but the share says
@@ -229,6 +255,10 @@ the odd one out (log scale, float multiplier), so that reads as intent.
   Up's newer layout *does* sum correctly and is checked.
 - **Size It Up prints no date.** Sibling inference is the real mitigation; the UI
   marks assumed dates as editable.
+- **Krillion ∞ can no longer be submitted through the UI.** The tabs cover the
+  five daily games only, and `onlyGame` scoping means a ∞ paste matches no tab.
+  The parser still reads it and the panel names it explicitly rather than
+  dropping it silently. Re-enabling it means a sixth tab or a separate route.
 - **Typed Globle scores** are matched at low confidence and never auto-saved —
   `Globle #20` is a puzzle number and looks identical. Phrasings where the number
   precedes the keyword ("7 on Globle") or no game is named ("I got it in 10") are
@@ -240,7 +270,7 @@ the odd one out (log scale, float multiplier), so that reads as intent.
 
 ## Testing
 
-`npm test` — 86 unit + integration. Integration tests need a database whose name
+`npm test` — 87 unit + integration. Integration tests need a database whose name
 ends in `_test`; `test/setup-db.ts` refuses otherwise, so they can't touch dev
 data. `server-only` is aliased to a stub under Vitest.
 

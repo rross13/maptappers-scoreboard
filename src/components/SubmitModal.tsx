@@ -43,7 +43,7 @@ export function SubmitModal({ roster }: { roster: RosterEntry[] }) {
                 Submit a score
               </h2>
               <p className="text-label text-muted mt-1">
-                Paste the share text from any game. Several at once is fine.
+                One game per tab. Submitting moves you to the next one.
               </p>
             </div>
             <button

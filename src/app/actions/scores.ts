@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { parsePaste, SCOREBOARD_TZ } from "@/lib/parser";
+import { GAMES, type GameSlug } from "@/lib/games/config";
 import { getPlayers, saveEntry, type SaveResult } from "@/lib/queries";
 
 export interface SubmitState {
@@ -12,15 +13,22 @@ export interface SubmitState {
 }
 
 /**
- * Persists everything parseable in a paste.
+ * Persists what a paste contains for one game.
  *
- * The client shows a live preview using the same parser, but this re-parses from
- * the raw text: the preview is UX, never the trust boundary.
+ * `onlyGame` is what makes the tabbed submit flow a single-game action: the tab
+ * decides which result is kept, so pasting a multi-game blob on the Globle tab
+ * saves the Globle line and nothing else. Scoping happens here, not on the
+ * client, because the client's parse is a preview and never the trust boundary
+ * — this re-parses from the raw text regardless.
+ *
+ * Omitting `onlyGame` keeps the original save-everything behaviour, which the
+ * backfill and any future bulk import still want.
  */
 export async function submitScore(
   playerId: string,
   text: string,
   acceptLowConfidence = false,
+  onlyGame?: GameSlug,
 ): Promise<SubmitState> {
   if (!playerId) {
     return { ok: false, saved: [], problems: [], message: "Pick your name first." };
@@ -36,13 +44,20 @@ export async function submitScore(
 
   const result = parsePaste(text, { timeZone: SCOREBOARD_TZ });
 
+  const entries = onlyGame
+    ? result.entries.filter((e) => e.game === onlyGame)
+    : result.entries;
+  const failures = onlyGame
+    ? result.failures.filter((f) => f.game === onlyGame)
+    : result.failures;
+
   // Low-confidence reads (typed Globle scores) are never saved without an
   // explicit confirmation, because "Globle #20" and "I did Globle 3 times"
   // are real shapes that look identical to a score.
-  const toSave = result.entries.filter(
+  const toSave = entries.filter(
     (e) => acceptLowConfidence || e.scoreConfidence !== "low",
   );
-  const heldBack = result.entries.filter(
+  const heldBack = entries.filter(
     (e) => !acceptLowConfidence && e.scoreConfidence === "low",
   );
 
@@ -52,7 +67,7 @@ export async function submitScore(
   }
 
   const problems = [
-    ...result.failures.flatMap((f) =>
+    ...failures.flatMap((f) =>
       f.issues
         .filter((i) => i.severity === "error")
         .map((i) => `${f.displayName}: ${i.message}`),
@@ -75,7 +90,9 @@ export async function submitScore(
     problems,
     message:
       saved.length === 0 && problems.length === 0
-        ? "Couldn't find a game score in that. Paste the share text straight from the game."
+        ? onlyGame
+          ? `Couldn't find a ${GAMES[onlyGame].name} score in that. Paste the share text straight from the game.`
+          : "Couldn't find a game score in that. Paste the share text straight from the game."
         : undefined,
   };
 }

@@ -34,6 +34,17 @@ describe("game config", () => {
     expect(new Set(accents).size).toBe(accents.length);
   });
 
+  /** Every URL here is copied out of a real share text; a typo sends the team
+   *  to the wrong site, and nothing else would catch it. */
+  it("gives every linked game an absolute https URL", () => {
+    for (const slug of GAME_SLUGS) {
+      const url = GAMES[slug].url;
+      if (url === undefined) continue;
+      expect(() => new URL(url)).not.toThrow();
+      expect(new URL(url).protocol).toBe("https:");
+    }
+  });
+
   it("narrows unknown slugs", () => {
     expect(isGameSlug("maptap")).toBe(true);
     expect(isGameSlug("wordle")).toBe(false);
