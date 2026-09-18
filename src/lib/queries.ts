@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, inArray, lte } from "drizzle-orm";
 import { db } from "@/db";
 import { players, scoreRevisions, scores } from "@/db/schema";
 import { GAMES, type GameSlug } from "@/lib/games/config";
@@ -11,6 +11,33 @@ export async function getPlayers() {
     .select()
     .from(players)
     .where(eq(players.isActive, true))
+    .orderBy(asc(players.displayName));
+}
+
+/**
+ * Every player including deactivated ones, with how many scores each holds.
+ *
+ * The count is what gates deletion on /admin: `scores.player_id` cascades, so a
+ * delete would take the history with it and silently move everyone else's
+ * z-scores. Deactivating is the right move for anyone who has played.
+ */
+export async function getPlayersForAdmin() {
+  // A join, not a correlated subquery in a `sql` template: Drizzle renders the
+  // columns inside such a template unqualified, so `where player_id = id`
+  // compares two columns of the *inner* table and silently counts zero. A join
+  // condition is qualified for you.
+  return db
+    .select({
+      id: players.id,
+      email: players.email,
+      displayName: players.displayName,
+      handle: players.handle,
+      isActive: players.isActive,
+      scoreCount: count(scores.id),
+    })
+    .from(players)
+    .leftJoin(scores, eq(scores.playerId, players.id))
+    .groupBy(players.id)
     .orderBy(asc(players.displayName));
 }
 
@@ -43,6 +70,9 @@ export async function getScores(
   if (from) conditions.push(gte(scores.puzzleDate, from));
   if (to) conditions.push(lte(scores.puzzleDate, to));
 
+  // Grouped join rather than a correlated subquery — see getPlayersForAdmin for
+  // why the subquery form counted zero. Grouping on the primary key is what lets
+  // the other scores columns come along unaggregated.
   const rows = await db
     .select({
       id: scores.id,
@@ -52,13 +82,12 @@ export async function getScores(
       rawScore: scores.rawScore,
       rounds: scores.rounds,
       puzzleNumber: scores.puzzleNumber,
-      revisionCount: sql<number>`(
-        select count(*)::int from ${scoreRevisions}
-        where ${scoreRevisions.scoreId} = ${scores.id}
-      )`,
+      revisionCount: count(scoreRevisions.id),
     })
     .from(scores)
+    .leftJoin(scoreRevisions, eq(scoreRevisions.scoreId, scores.id))
     .where(and(...conditions))
+    .groupBy(scores.id)
     .orderBy(desc(scores.puzzleDate));
 
   return rows as ScoreRow[];

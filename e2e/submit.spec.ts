@@ -13,7 +13,7 @@ Final score: 866`;
 
 async function openSubmit(page: Page) {
   await page.goto("/");
-  await page.getByRole("button", { name: "Submit scores" }).click();
+  await page.getByRole("button", { name: "Play & Submit" }).click();
 }
 
 test("paste a MapTap score, save it, and see it on the leaderboard", async ({ page }) => {
@@ -127,7 +127,7 @@ test("remembers the selected player across a reload", async ({ page }) => {
   await openSubmit(page);
   await page.selectOption("#player", { label: "Owen" });
   await page.reload();
-  await page.getByRole("button", { name: "Submit scores" }).click();
+  await page.getByRole("button", { name: "Play & Submit" }).click();
   await expect(page.locator("#player")).toHaveValue(
     await page.locator("#player option", { hasText: "Owen" }).getAttribute("value") ?? "",
   );

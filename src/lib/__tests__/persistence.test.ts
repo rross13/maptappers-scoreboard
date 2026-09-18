@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { sql } from "drizzle-orm";
 import { db } from "@/db";
 import { players, scoreRevisions, scores } from "@/db/schema";
-import { saveEntry } from "@/lib/queries";
+import { getPlayersForAdmin, getScores, saveEntry } from "@/lib/queries";
 import { parsePaste } from "@/lib/parser";
 import { fixture, SUBMITTED_AT } from "@/lib/parser/__tests__/fixtures";
 
@@ -143,5 +143,54 @@ describe("database constraints", () => {
     await saveEntry(p.id, entryFrom("maptap-slack-shortcodes.txt"));
     await db.delete(players);
     expect(await db.select().from(scores)).toHaveLength(0);
+  });
+});
+
+/**
+ * These counts were silently zero for every row once: written as correlated
+ * subqueries in a `sql` template, Drizzle rendered the columns unqualified, so
+ * `where score_id = id` compared two columns of the inner table. Nothing failed
+ * — the numbers were just always 0. Assert real counts, not just a shape.
+ */
+describe("row counts", () => {
+  beforeEach(reset);
+
+  it("counts each player's scores, and zero for a player with none", async () => {
+    const riley = await makePlayer("riley");
+    await makePlayer("owen");
+    await saveEntry(riley.id, entryFrom("maptap-slack-shortcodes.txt"));
+    await saveEntry(riley.id, entryFrom("krillion-daily-shortcodes.txt"));
+
+    const rows = await getPlayersForAdmin();
+    const byName = Object.fromEntries(rows.map((r) => [r.handle, r.scoreCount]));
+    expect(byName).toEqual({ riley: 2, owen: 0 });
+  });
+
+  it("counts revisions per score", async () => {
+    const p = await makePlayer("riley");
+    const entry = entryFrom("maptap-slack-shortcodes.txt");
+    await saveEntry(p.id, entry);
+
+    let [row] = await getScores();
+    expect(row.revisionCount).toBe(0);
+
+    // Same (player, game, date), so this overwrites and banks a revision.
+    await saveEntry(p.id, { ...entry, score: 900 });
+    [row] = await getScores();
+    expect(row.rawScore).toBe(900);
+    expect(row.revisionCount).toBe(1);
+
+    await saveEntry(p.id, { ...entry, score: 910 });
+    [row] = await getScores();
+    expect(row.revisionCount).toBe(2);
+  });
+
+  it("keeps one row per score when a score has several revisions", async () => {
+    const p = await makePlayer("riley");
+    const entry = entryFrom("maptap-slack-shortcodes.txt");
+    await saveEntry(p.id, entry);
+    await saveEntry(p.id, { ...entry, score: 900 });
+    // The join must not fan the score out into one row per revision.
+    expect(await getScores()).toHaveLength(1);
   });
 });

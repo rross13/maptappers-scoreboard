@@ -8,7 +8,7 @@ import {
 } from "@/components/SubmitPanel";
 
 /**
- * The "Submit scores" trigger and the dialog it opens.
+ * The "Play & Submit" trigger and the dialog it opens.
  *
  * Built on the native <dialog> so focus trapping, Esc-to-close and inerting the
  * page behind come from the platform instead of hand-rolled key handlers.
@@ -35,7 +35,7 @@ export function SubmitModal({
         onClick={() => ref.current?.showModal()}
         className="rounded-pill bg-accent text-ink text-body font-bold px-5 py-2.5 shrink-0"
       >
-        Submit scores
+        Play &amp; Submit
       </button>
 
       <dialog

@@ -26,6 +26,7 @@ src/lib/queries.ts    DB reads + saveEntry (carries `server-only`)
 src/lib/standings.ts  range/metric parsing, slot building (carries `server-only`)
 src/db/schema.ts      Drizzle schema
 src/app/              App Router; server components except SubmitModal/Panel + toggles
+  admin/              unlisted roster editor — plain form posts, no client JS
 scripts/              seed · backfill · verify-scoring · build-history.py
 ```
 
@@ -46,6 +47,15 @@ Decoding first manufactures links out of ordinary text. There's a test for this.
 **The server always re-parses.** `SubmitPanel` runs the same parser in the
 browser for live preview, but `submitScore` parses the raw text again. The
 preview is UX, never the trust boundary.
+
+**Never count with a correlated subquery in a `sql` template.** Drizzle renders
+the columns inside one *unqualified*, so
+``sql`(select count(*) from ${scoreRevisions} where ${scoreRevisions.scoreId} = ${scores.id})` ``
+becomes `where "score_id" = "id"` — two columns of the inner table, compared to
+each other. It never errors; every row just counts 0, which is exactly what
+`revisionCount` did until it was caught. Use a `leftJoin` + `groupBy` on the
+primary key, and assert a real number in a test. `persistence.test.ts` covers
+both counts.
 
 **Anchors carry `m`, never `g`.** The block splitter clones them; a `g` regex
 carries `lastIndex` between calls and matches non-deterministically.
@@ -192,7 +202,7 @@ Note this is a *modified* wordmark, which the corporate brand rules would not
 allow on outward-facing work.
 
 `/` is the day's board, and submitting happens in a dialog behind its
-"Submit scores" button. `SubmitModal` uses the native `<dialog>`, so focus
+"Play & Submit" button. `SubmitModal` uses the native `<dialog>`, so focus
 trapping, Esc-to-close and inerting the page come from the platform — don't
 replace it with a div and hand-rolled key handlers. It deliberately stays open
 after a save, because the result list is the only confirmation of what was
@@ -261,6 +271,24 @@ post, so that one came from Riley by hand. Don't guess one — a wrong link send
 the team to a parked domain, and `config.test.ts` can only check the shape, not
 the destination.
 
+## Admin
+
+`/admin` edits the roster: add, rename, deactivate, delete. It is linked from
+nowhere and carries `robots: noindex`, and that is the whole of its protection —
+the app has no auth, so anyone who knows the path can use it. Say so out loud
+rather than letting the missing link read as security.
+
+The page is a server component with plain `<form action={serverAction}>` posts
+and no client JS; results come back as `?ok=` / `?error=` on the redirect. Unique
+violations (23505) are translated into which field collided.
+
+**Delete is blocked for anyone holding scores**, because `scores.player_id`
+cascades — deleting would take the history with it and quietly move every other
+player's z-scores for those days. Deactivating is the real remove: `getPlayers()`
+already filters on `is_active`, so it drops them from the roster, the board and
+the name picker while the history stays. The check is enforced in the action, not
+just by the disabled button.
+
 ## Known gaps
 
 - **MapTap's score formula is unknown.** `99+80+93+80+89 = 441` but the share says
@@ -284,7 +312,7 @@ the destination.
 
 ## Testing
 
-`npm test` — 87 unit + integration. Integration tests need a database whose name
+`npm test` — 90 unit + integration. Integration tests need a database whose name
 ends in `_test`; `test/setup-db.ts` refuses otherwise, so they can't touch dev
 data. `server-only` is aliased to a stub under Vitest.
 
