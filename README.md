@@ -74,7 +74,12 @@ Nothing here needs an external account until you deploy — there is no auth in 
 1. **Neon** — create a project, copy the *pooled* connection string.
 2. **Vercel** — import the repo, set `DATABASE_URL` to that string. The Postgres
    client already sets `prepare: false`, which transaction pooling requires.
-3. Run `npm run db:migrate` and `npm run db:seed` against the Neon database once.
+3. Put that same string in `.env.neon` locally (gitignored), then
+   `npm run db:migrate:prod` to create the schema. Seed with `db:seed`, or carry
+   real history over with a `pg_dump --data-only` from the dev database.
+
+Promoting changes afterwards — and the ordering rule for migrations — is in
+`AGENTS.md` under "Deploying".
 
 ## Identity
 

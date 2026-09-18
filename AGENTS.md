@@ -326,6 +326,62 @@ Scoring changes need the degenerate cases above re-tested. Parser changes need a
 fixture, not an inline string literal — fixtures are real `.txt` so trailing
 whitespace, CRLF and raw emoji survive.
 
+## Deploying
+
+Vercel watches the repo: **a push to `main` deploys production**, any other
+branch gets a preview URL. Neon holds the production database (`neondb`, PG
+18.6); the local Homebrew `maptappers` is separate and nothing syncs between
+them.
+
+**`next build` does not run migrations.** The build script is plain `next
+build`, so nothing in the deploy pipeline touches Neon's schema. Applying one is
+a manual step you run from a laptop:
+
+```
+npm run db:generate      # schema.ts → drizzle/NNNN_*.sql
+npm run db:migrate       # local, then npm test
+npm run db:migrate:prod  # Neon
+```
+
+**Order the migration against the deploy by which direction is safe.** Additive
+changes (new table, new nullable column) go to Neon *first* — old code ignores
+what it doesn't reference. Destructive ones (drop, rename, tighten a constraint)
+go *after* the deploy that stops using the column. Getting it backwards leaves a
+window where production queries something that isn't there.
+
+`db:migrate:prod` reads `.env.neon` (gitignored by `.env*`) through Node's
+`--env-file`, **not** through `drizzle.config.ts`'s dotenv call. That is the
+point: dotenv loads `.env.local` and won't override an already-set variable, so
+a prod script that failed to find its own env file would quietly migrate the dev
+database instead. `--env-file` exits 9 on a missing file, so it fails loudly.
+
+**Never run `db:push` against Neon.** It diffs the schema against the live
+database and will drop a column to make them agree. Local dev only.
+
+Commit `drizzle/*.sql` — it is the record of what has been applied, and
+`drizzle.__drizzle_migrations` on Neon is what makes a re-run a no-op.
+
+**Preview deploys share the production database.** `DATABASE_URL` is set on all
+three Vercel scopes, so a preview URL writes real scores and a preview of a
+branch with an unapplied migration 500s. The fix is a Neon branch (copy-on-write,
+instant) with its string overriding `DATABASE_URL` on the Preview scope only.
+
+Vercel's Instant Rollback restores **code, not schema**. A rolled-back deploy
+still faces whatever migration shipped with it — another reason to keep
+migrations additive and separate from the code that uses them.
+
+### psql against Neon needs an SSL override
+
+`~/.postgresql/root.crt` on Riley's machine is an Amazon RDS bundle from an
+unrelated project. libpq treats that path as the default root CA and documents
+that its presence silently upgrades `sslmode=require` to `verify-ca`, so psql
+and pg_dump reject Neon's Let's Encrypt chain with `certificate verify failed`.
+Append `sslmode=verify-full&sslrootcert=system` to point libpq at the OS trust
+store — `require` alone is refused alongside `sslrootcert=system`. Deleting
+root.crt would fix it too and break the RDS project.
+
+The app is unaffected: postgres.js is pure Node and never reads that file.
+
 ---
 
 <!-- BEGIN:nextjs-agent-rules -->
