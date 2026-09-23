@@ -158,8 +158,19 @@ Scoreboard timezone is `America/Denver` (`SCOREBOARD_TZ`).
   Drizzle returns that as a *string*, forcing parse-on-read everywhere.
 - **Per-round subscores in JSONB.** Always read with the parent row, never queried
   across rows.
-- **`source_text` is NOT NULL.** The highest-value bytes here: a parser bug found
-  later becomes a replay, not a re-import.
+- **`source_text` is NOT NULL, but it is not the paste.** It holds one game's
+  block *after* normalization (shortcodes, links stripped): enough to re-run a
+  game parser, not to replay a bug in `normalize.ts` or block splitting.
+- **`raw_paste` is the paste**, byte for byte, including the other games and the
+  chatter around them. It's the highest-value column here, because it turns any
+  parser bug into a replay. It's nullable, and null for every row saved before it
+  existed and for the backfill. `score_revisions` copies it on replace.
+- **Emoji art shows only when `raw_paste` is present.** `build-history.py`
+  *regenerated* the backfill's tile art (Krillion alternates fish/bubbles, every
+  MapTap round is `:dart:`), so for those rows the hover breakdown
+  (`lib/games/breakdown.ts`) shows only the numbers, and Krillion shows nothing.
+  `getScores` turns the column into an `artVerified` boolean so the paste
+  never reaches a page.
 - **Unique on `(player_id, game, puzzle_date)`.** Keyed on date, not puzzle number
   — only some games print one, and a shared date is what makes the daily z
   meaningful.
@@ -295,6 +306,9 @@ just by the disabled button.
   `872`, and the gap widens as rounds drop. No relation fits across 8 samples.
   `Final score:` is authoritative and rounds are never cross-validated. Size It
   Up's newer layout *does* sum correctly and is checked.
+- **Rows from before `raw_paste` show numbers only** in the hover, even real web
+  submissions whose art was genuine. Size It Up rows from before `grid` was
+  captured in `meta` fall back to row scores.
 - **Size It Up prints no date.** Sibling inference is the real mitigation; the UI
   marks assumed dates as editable.
 - **Krillion ∞ can no longer be submitted through the UI.** The tabs cover the
@@ -312,7 +326,7 @@ just by the disabled button.
 
 ## Testing
 
-`npm test` — 90 unit + integration. Integration tests need a database whose name
+`npm test` — unit + integration. Integration tests need a database whose name
 ends in `_test`; `test/setup-db.ts` refuses otherwise, so they can't touch dev
 data. `server-only` is aliased to a stub under Vitest.
 

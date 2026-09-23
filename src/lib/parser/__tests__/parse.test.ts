@@ -89,10 +89,27 @@ describe("Size It Up", () => {
     expect(e.issues).toHaveLength(0);
   });
 
+  it("keeps each grid5 row's squares for the breakdown", () => {
+    const e = parse("sizeitup-grid5-with-row-scores.txt").entries[0];
+    const grid = e.detail?.kind === "size_it_up" ? e.detail.grid : undefined;
+    expect(grid).toHaveLength(5);
+    expect(grid![1]).toEqual([
+      "large_red_square",
+      "large_red_square",
+      "large_red_square",
+      "white_large_square",
+      "white_large_square",
+    ]);
+  });
+
   it("parses the older 10-square bar layout without summing rows", () => {
     const e = parse("sizeitup-bar10-no-row-scores.txt").entries[0];
     expect(e.score).toBe(335);
     expect(e.detail).toMatchObject({ kind: "size_it_up", variant: "bar10" });
+    const grid = e.detail?.kind === "size_it_up" ? e.detail.grid : undefined;
+    expect(grid?.map((row) => row.length)).toEqual([10, 10, 10, 10, 10]);
+    expect(grid?.map((row) => row.filter((t) => t === "large_red_square").length))
+      .toEqual([8, 9, 6, 6, 4]);
     // The bars are a rounded rendering, not data — no sum check may fire.
     expect(e.issues.map((i) => i.code)).not.toContain("row-sum-mismatch");
   });

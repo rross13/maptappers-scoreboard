@@ -44,6 +44,9 @@ export type GameDetail =
       kind: "size_it_up";
       variant: "grid5" | "bar10";
       rowScores?: number[];
+      /** Shortcodes per row. Optional because rows saved before it was captured
+       *  carry only rowScores. */
+      grid?: string[][];
     }
   | {
       kind: "globle";

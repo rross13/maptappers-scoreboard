@@ -193,6 +193,8 @@ async function main() {
       rounds: entry.detail && "rounds" in entry.detail ? entry.detail.rounds : null,
       meta: entry.detail as Record<string, unknown> | undefined,
       sourceText: entry.sourceText,
+      // No rawPaste: the history file's tile art was regenerated, so it is not
+      // what anyone pasted, and a null keeps that art out of the breakdown.
       source: "slack_backfill",
       parserVersion: PARSER_VERSION,
     });

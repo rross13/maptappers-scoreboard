@@ -3,7 +3,7 @@ import { and, asc, count, desc, eq, gte, inArray, lte } from "drizzle-orm";
 import { db } from "@/db";
 import { players, scoreRevisions, scores } from "@/db/schema";
 import { GAMES, type GameSlug } from "@/lib/games/config";
-import type { ParsedEntry } from "@/lib/parser";
+import type { GameDetail, ParsedEntry } from "@/lib/parser";
 import { PARSER_VERSION } from "@/lib/parser";
 
 export async function getPlayers() {
@@ -55,6 +55,10 @@ export interface ScoreRow {
   rounds: number[] | null;
   puzzleNumber: number | null;
   revisionCount: number;
+  detail: GameDetail | null;
+  /** Whether the stored tile art is the player's own. Backfilled and older rows
+   *  have no raw paste, and the backfill's art was regenerated. */
+  artVerified: boolean;
 }
 
 /** All daily-game scores in a date window, with a revision count per row. */
@@ -82,6 +86,8 @@ export async function getScores(
       rawScore: scores.rawScore,
       rounds: scores.rounds,
       puzzleNumber: scores.puzzleNumber,
+      meta: scores.meta,
+      rawPaste: scores.rawPaste,
       revisionCount: count(scoreRevisions.id),
     })
     .from(scores)
@@ -90,7 +96,12 @@ export async function getScores(
     .groupBy(scores.id)
     .orderBy(desc(scores.puzzleDate));
 
-  return rows as ScoreRow[];
+  // The paste itself is mapped away here so it never ships to a page.
+  return rows.map(({ meta, rawPaste, ...r }) => ({
+    ...r,
+    detail: (meta as GameDetail | null) ?? null,
+    artVerified: rawPaste !== null,
+  })) as ScoreRow[];
 }
 
 export interface SaveResult {
@@ -113,6 +124,7 @@ export async function saveEntry(
   playerId: string,
   entry: ParsedEntry,
   source: "web" | "slack_backfill" | "manual_admin" = "web",
+  rawPaste?: string,
 ): Promise<SaveResult> {
   return db.transaction(async (tx) => {
     const [existing] = await tx
@@ -133,6 +145,7 @@ export async function saveEntry(
         rounds: existing.rounds,
         meta: existing.meta,
         sourceText: existing.sourceText,
+        rawPaste: existing.rawPaste,
         parserVersion: existing.parserVersion,
       });
       await tx
@@ -143,6 +156,7 @@ export async function saveEntry(
           meta: entry.detail as Record<string, unknown> | undefined,
           puzzleNumber: entry.puzzleNumber ?? null,
           sourceText: entry.sourceText,
+          rawPaste: rawPaste ?? null,
           source,
           parserVersion: PARSER_VERSION,
           updatedAt: new Date(),
@@ -167,6 +181,7 @@ export async function saveEntry(
       rounds: entry.detail && "rounds" in entry.detail ? entry.detail.rounds : null,
       meta: entry.detail as Record<string, unknown> | undefined,
       sourceText: entry.sourceText,
+      rawPaste: rawPaste ?? null,
       source,
       parserVersion: PARSER_VERSION,
     });

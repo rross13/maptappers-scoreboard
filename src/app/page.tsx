@@ -1,5 +1,7 @@
+import { ScoreBreakdown } from "@/components/ScoreBreakdown";
 import { SubmitModal } from "@/components/SubmitModal";
 import { DarkCard, GamePill } from "@/components/brand";
+import { breakdownFor } from "@/lib/games/breakdown";
 import { DAILY_GAMES, formatScore, type GameSlug } from "@/lib/games/config";
 import { getPlayers, getScores } from "@/lib/queries";
 import { civilDateIn, SCOREBOARD_TZ } from "@/lib/parser/dates";
@@ -66,7 +68,11 @@ export default async function TodayPage() {
                     return (
                       <td key={g.slug} className="p-4 text-center tabular-nums">
                         {row ? (
-                          <span>{formatScore(g.slug, row.rawScore)}</span>
+                          <ScoreBreakdown
+                            lines={breakdownFor(row.detail, row.artVerified)?.lines ?? null}
+                          >
+                            {formatScore(g.slug, row.rawScore)}
+                          </ScoreBreakdown>
                         ) : (
                           <span className="text-muted">&mdash;</span>
                         )}

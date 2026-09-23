@@ -87,6 +87,12 @@ export const SHORTCODE_TO_EMOJI: Record<string, string> = Object.fromEntries(
   Object.entries(EMOJI_TO_SHORTCODE).map(([e, s]) => [s, e]),
 );
 
+/** Stored shortcodes back to emoji for display. An unknown `:name:` stays as
+ *  text rather than vanishing, and raw Unicode passes through untouched. */
+export function emojify(s: string): string {
+  return s.replace(/:([a-z0-9_+-]+):/g, (m, name: string) => SHORTCODE_TO_EMOJI[name] ?? m);
+}
+
 /** Matches one emoji cluster: base pictograph, optional VS16, optional ZWJ runs. */
 export const EMOJI_CLUSTER =
   /\p{Extended_Pictographic}️?(?:‍\p{Extended_Pictographic}️?)*/gu;

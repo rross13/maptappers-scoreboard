@@ -40,6 +40,7 @@ export const sizeItUp: GameDefinition = {
     const issues = [];
 
     const rowScores: number[] = [];
+    const grid: string[][] = [];
     let variant: "grid5" | "bar10" | null = null;
     let consumed = scoreIdx + 1;
 
@@ -50,6 +51,7 @@ export const sizeItUp: GameDefinition = {
         variant ??= "grid5";
         if (variant === "grid5") {
           rowScores.push(Number(g5[2]));
+          grid.push(g5[1].split(":").filter(Boolean));
           consumed = i + 1;
           continue;
         }
@@ -57,6 +59,7 @@ export const sizeItUp: GameDefinition = {
       if (ROW_BAR10.test(line)) {
         variant ??= "bar10";
         if (variant === "bar10") {
+          grid.push(line.split(":").filter(Boolean));
           consumed = i + 1;
           continue;
         }
@@ -127,6 +130,7 @@ export const sizeItUp: GameDefinition = {
           kind: "size_it_up",
           variant: variant ?? "grid5",
           rowScores: variant === "grid5" ? rowScores : undefined,
+          grid,
         },
         issues,
         sourceText: blockText(block, consumed),

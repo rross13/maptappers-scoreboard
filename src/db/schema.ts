@@ -73,9 +73,14 @@ export const scores = pgTable(
     rounds: jsonb("rounds").$type<number[]>(),
     meta: jsonb("meta").$type<Record<string, unknown>>(),
 
-    /** Verbatim paste. Lets a parser bug found later become a replay rather
-     *  than a re-import. */
+    /** This game's block of the paste, after normalization (shortcodes, links
+     *  stripped). Enough to re-run a game parser, not to replay normalize.ts. */
     sourceText: text("source_text").notNull(),
+    /** The whole paste exactly as submitted. What makes a normalization or
+     *  segmentation bug a replay. Null for rows saved before it existed and for
+     *  the backfill, whose tile art was regenerated — the breakdown shows emoji
+     *  art only when this is present. */
+    rawPaste: text("raw_paste"),
     source: sourceEnum("source").notNull().default("web"),
     parserVersion: integer("parser_version").notNull().default(1),
 
@@ -110,6 +115,7 @@ export const scoreRevisions = pgTable(
     rounds: jsonb("rounds").$type<number[]>(),
     meta: jsonb("meta").$type<Record<string, unknown>>(),
     sourceText: text("source_text").notNull(),
+    rawPaste: text("raw_paste"),
     parserVersion: integer("parser_version").notNull(),
     replacedAt: timestamp("replaced_at", { withTimezone: true })
       .notNull()

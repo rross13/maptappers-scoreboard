@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { DarkCard, GameTabLinks, SectionTitle } from "@/components/brand";
+import { ScoreBreakdown } from "@/components/ScoreBreakdown";
 import { Toggles } from "@/components/Toggles";
+import { breakdownFor } from "@/lib/games/breakdown";
 import { GAMES, isGameSlug } from "@/lib/games/config";
 import { getPlayers, getScores } from "@/lib/queries";
 import { buildSlots, parseRange, rangeBounds, RANGES } from "@/lib/standings";
@@ -151,8 +153,12 @@ export default async function GamePage({
                             {byId.get(r.playerId)?.displayName ?? "Unknown"}
                           </span>
                           <span className="tabular-nums min-w-20">
-                            {r.rawScore.toFixed(cfg.precision)}
-                            {cfg.suffix ?? ""}
+                            <ScoreBreakdown
+                              lines={breakdownFor(r.detail, r.artVerified)?.lines ?? null}
+                            >
+                              {r.rawScore.toFixed(cfg.precision)}
+                              {cfg.suffix ?? ""}
+                            </ScoreBreakdown>
                           </span>
                           <span className="tabular-nums text-muted min-w-16">
                             {n >= 2

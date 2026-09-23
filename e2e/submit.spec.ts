@@ -43,6 +43,10 @@ test("paste a MapTap score, save it, and see it on the leaderboard", async ({ pa
   await page.goto("/games/maptap?range=all");
   await expect(page.locator("text=2026-09-01").first()).toBeVisible();
   await expect(page.locator("text=866").first()).toBeVisible();
+
+  // A web save keeps the raw paste, so the hover shows the real round emoji.
+  await page.getByRole("button", { name: "866" }).first().hover();
+  await expect(page.getByRole("tooltip")).toHaveText("91🎯 88🏆 77👏 95🔥 82🌟");
 });
 
 test("jumps straight to one game and links out to it", async ({ page }) => {

@@ -63,7 +63,7 @@ export async function submitScore(
 
   const saved: SaveResult[] = [];
   for (const entry of toSave) {
-    saved.push(await saveEntry(playerId, entry));
+    saved.push(await saveEntry(playerId, entry, "web", text));
   }
 
   const problems = [

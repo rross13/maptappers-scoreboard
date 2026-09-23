@@ -101,6 +101,66 @@ describe("saveEntry", () => {
   });
 });
 
+describe("raw paste", () => {
+  beforeEach(reset);
+
+  it("stores the whole paste byte for byte, not just this game's block", async () => {
+    const p = await makePlayer("riley");
+    // CRLF and raw Unicode are what normalization rewrites, so they prove the
+    // column holds the input rather than the normalized form.
+    const paste = fixture("multi-all-five-games.txt").replace(/\n/g, "\r\n") + "\r\ngg 🎉";
+    const entry = parsePaste(paste, { submittedAt: SUBMITTED_AT }).entries[0];
+    await saveEntry(p.id, entry, "web", paste);
+
+    const [row] = await db.select().from(scores);
+    expect(row.rawPaste).toBe(paste);
+    expect(row.sourceText.length).toBeLessThan(paste.length);
+  });
+
+  it("is null when no paste is given, as for the backfill", async () => {
+    const p = await makePlayer("riley");
+    await saveEntry(p.id, entryFrom("maptap-slack-shortcodes.txt"), "slack_backfill");
+    const [row] = await db.select().from(scores);
+    expect(row.rawPaste).toBeNull();
+  });
+
+  it("copies the old paste into the revision on replace", async () => {
+    const p = await makePlayer("riley");
+    const first = fixture("maptap-slack-shortcodes.txt");
+    const second = fixture("maptap-unicode-emoji.txt");
+    await saveEntry(p.id, entryFrom("maptap-slack-shortcodes.txt"), "web", first);
+    await saveEntry(p.id, entryFrom("maptap-unicode-emoji.txt"), "web", second);
+
+    const [row] = await db.select().from(scores);
+    const [rev] = await db.select().from(scoreRevisions);
+    expect(row.rawPaste).toBe(second);
+    expect(rev.rawPaste).toBe(first);
+  });
+
+  it("exposes detail and whether the art is verified, never the paste", async () => {
+    const p = await makePlayer("riley");
+    await saveEntry(
+      p.id,
+      entryFrom("krillion-mixed-tiles-unicode.txt"),
+      "web",
+      fixture("krillion-mixed-tiles-unicode.txt"),
+    );
+    await saveEntry(p.id, entryFrom("maptap-slack-shortcodes.txt"), "slack_backfill");
+
+    const rows = await getScores();
+    const krillion = rows.find((r) => r.game === "krillion")!;
+    const maptap = rows.find((r) => r.game === "maptap")!;
+    expect(krillion.artVerified).toBe(true);
+    expect(krillion.detail).toMatchObject({
+      kind: "krillion",
+      tiles: ["bubbles", "squid", "fish", "fish", "fish", "fish", "fish"],
+    });
+    expect(maptap.artVerified).toBe(false);
+    expect(maptap.detail).toMatchObject({ kind: "maptap", rounds: [99, 80, 93, 80, 89] });
+    expect(Object.keys(krillion)).not.toContain("rawPaste");
+  });
+});
+
 describe("database constraints", () => {
   beforeEach(reset);
 
