@@ -1,6 +1,7 @@
 import "server-only";
-import { getPlayers, getScores, type ScoreRow } from "@/lib/queries";
+import { getPlayDays, getPlayers, getScores, type ScoreRow } from "@/lib/queries";
 import { groupIntoSlots, standings, type Metric, type Slot } from "@/lib/scoring/aggregate";
+import { streaks } from "@/lib/scoring/streaks";
 import { scoreSlot } from "@/lib/scoring/z";
 import { civilDateIn } from "@/lib/parser/dates";
 import { SCOREBOARD_TZ } from "@/lib/parser";
@@ -57,4 +58,9 @@ export async function getStandings(range: Range, metric: Metric) {
       player: byId.get(s.playerId),
     })),
   };
+}
+
+/** Current all-five-games streak per player id, in the scoreboard's timezone. */
+export async function getStreaks(): Promise<Map<string, number>> {
+  return streaks(await getPlayDays(), civilDateIn(new Date(), SCOREBOARD_TZ));
 }

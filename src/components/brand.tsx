@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { DAILY_GAMES, GAMES, type GameSlug } from "@/lib/games/config";
+import { STREAK_MIN } from "@/lib/scoring/streaks";
 
 /**
  * Brand primitives.
@@ -84,6 +85,25 @@ export function GamePill({
       className={`rounded-pill ${PILL_BG[cfg.accent]} text-ink text-pill font-bold px-2.5 py-1 inline-flex items-center gap-1.5 whitespace-nowrap ${className}`}
     >
       {cfg.name}
+    </span>
+  );
+}
+
+/**
+ * The all-five-games streak shown beside a name. Renders nothing below
+ * STREAK_MIN, so call sites can pass whatever the map holds.
+ */
+export function StreakBadge({ days }: { days: number | undefined }) {
+  if (!days || days < STREAK_MIN) return null;
+  const label = `${days}-day streak of all five games`;
+  return (
+    <span
+      title={label}
+      aria-label={label}
+      className="inline-flex items-center gap-0.5 text-label font-bold text-paper tabular-nums whitespace-nowrap"
+    >
+      <span aria-hidden="true">🔥</span>
+      {days}
     </span>
   );
 }

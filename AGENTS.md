@@ -129,6 +129,15 @@ proportional to that ratio, and an unrestricted generator finds pairs separated
 by less than one ulp where the identity degenerates. That's a floating-point
 limit, not a bug — don't "fix" it by loosening to a constant epsilon.
 
+### Streaks
+
+`scoring/streaks.ts`: consecutive days on which a player logged **all five**
+daily games, keyed on `puzzle_date` rather than when they submitted, ending
+today. An incomplete today doesn't break it; counting starts at yesterday until
+today is complete, or the badge would vanish every morning. Krillion ∞ never
+counts. The 🔥 badge shows from `STREAK_MIN = 2`. Like everything else, it's
+computed on read.
+
 ## Dates
 
 | Game | Source |

@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { sql } from "drizzle-orm";
 import { db } from "@/db";
 import { players, scoreRevisions, scores } from "@/db/schema";
-import { getPlayersForAdmin, getScores, saveEntry } from "@/lib/queries";
+import { getPlayDays, getPlayersForAdmin, getScores, saveEntry } from "@/lib/queries";
 import { parsePaste } from "@/lib/parser";
 import { fixture, SUBMITTED_AT } from "@/lib/parser/__tests__/fixtures";
 
@@ -158,6 +158,26 @@ describe("raw paste", () => {
     expect(maptap.artVerified).toBe(false);
     expect(maptap.detail).toMatchObject({ kind: "maptap", rounds: [99, 80, 93, 80, 89] });
     expect(Object.keys(krillion)).not.toContain("rawPaste");
+  });
+});
+
+describe("getPlayDays", () => {
+  beforeEach(reset);
+
+  it("lists each player's games per day, and leaves out deactivated players", async () => {
+    const riley = await makePlayer("riley");
+    const owen = await makePlayer("owen");
+    await saveEntry(riley.id, entryFrom("maptap-slack-shortcodes.txt"));
+    await saveEntry(riley.id, entryFrom("krillion-daily-shortcodes.txt"));
+    await saveEntry(owen.id, entryFrom("maptap-slack-shortcodes.txt"));
+    await db.update(players).set({ isActive: false }).where(sql`${players.id} = ${owen.id}`);
+
+    const rows = await getPlayDays();
+    expect(rows.map((r) => `${r.game}|${r.puzzleDate}`).sort()).toEqual([
+      "krillion|2026-09-18",
+      "maptap|2026-09-18",
+    ]);
+    expect(new Set(rows.map((r) => r.playerId))).toEqual(new Set([riley.id]));
   });
 });
 

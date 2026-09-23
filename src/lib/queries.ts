@@ -104,6 +104,16 @@ export async function getScores(
   })) as ScoreRow[];
 }
 
+/** Which games each active player logged on which days: all streaks need, and
+ *  unwindowed, since a streak can run back to the first day. */
+export async function getPlayDays() {
+  return db
+    .select({ playerId: scores.playerId, game: scores.game, puzzleDate: scores.puzzleDate })
+    .from(scores)
+    .innerJoin(players, eq(players.id, scores.playerId))
+    .where(eq(players.isActive, true));
+}
+
 export interface SaveResult {
   game: GameSlug;
   displayName: string;

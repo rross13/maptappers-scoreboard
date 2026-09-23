@@ -1,18 +1,20 @@
 import { ScoreBreakdown } from "@/components/ScoreBreakdown";
 import { SubmitModal } from "@/components/SubmitModal";
-import { DarkCard, GamePill } from "@/components/brand";
+import { DarkCard, GamePill, StreakBadge } from "@/components/brand";
 import { breakdownFor } from "@/lib/games/breakdown";
 import { DAILY_GAMES, formatScore, type GameSlug } from "@/lib/games/config";
 import { getPlayers, getScores } from "@/lib/queries";
 import { civilDateIn, SCOREBOARD_TZ } from "@/lib/parser/dates";
+import { getStreaks } from "@/lib/standings";
 
 export const dynamic = "force-dynamic";
 
 export default async function TodayPage() {
   const today = civilDateIn(new Date(), SCOREBOARD_TZ);
-  const [roster, todayScores] = await Promise.all([
+  const [roster, todayScores, streakDays] = await Promise.all([
     getPlayers(),
     getScores(today, today),
+    getStreaks(),
   ]);
 
   const filled = new Set(todayScores.map((s) => `${s.playerId}|${s.game}`));
@@ -60,7 +62,12 @@ export default async function TodayPage() {
             <tbody>
               {roster.map((p) => (
                 <tr key={p.id} className="border-t border-surface-raised">
-                  <td className="p-4 whitespace-nowrap">{p.displayName}</td>
+                  <td className="p-4 whitespace-nowrap">
+                    <span className="inline-flex items-center gap-2">
+                      {p.displayName}
+                      <StreakBadge days={streakDays.get(p.id)} />
+                    </span>
+                  </td>
                   {DAILY_GAMES.map((g) => {
                     const row = todayScores.find(
                       (s) => s.playerId === p.id && s.game === g.slug,

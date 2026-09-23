@@ -1,9 +1,9 @@
 import { notFound } from "next/navigation";
-import { DarkCard, GamePill, SectionTitle } from "@/components/brand";
+import { DarkCard, GamePill, SectionTitle, StreakBadge } from "@/components/brand";
 import { Sparkline } from "@/components/Sparkline";
 import { DAILY_GAMES } from "@/lib/games/config";
 import { getPlayerByHandle, getPlayers, getScores } from "@/lib/queries";
-import { buildSlots } from "@/lib/standings";
+import { buildSlots, getStreaks } from "@/lib/standings";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +16,11 @@ export default async function PlayerPage({
   const player = await getPlayerByHandle(handle);
   if (!player) notFound();
 
-  const [roster, rows] = await Promise.all([getPlayers(), getScores()]);
+  const [roster, rows, streakDays] = await Promise.all([
+    getPlayers(),
+    getScores(),
+    getStreaks(),
+  ]);
   const slots = buildSlots(rows);
 
   const mine = new Map<string, { z: number; game: string; date: string }[]>();
@@ -71,7 +75,10 @@ export default async function PlayerPage({
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-title font-extrabold">{player.displayName}</h1>
+        <h1 className="text-title font-extrabold flex items-center gap-3">
+          {player.displayName}
+          <StreakBadge days={streakDays.get(player.id)} />
+        </h1>
         <p className="text-label text-muted mt-1">
           {myRows.length} scores &middot; {dates.length} days played
           {edited > 0 && ` · ${edited} edited`}

@@ -1,8 +1,14 @@
 import Link from "next/link";
-import { DarkCard, GamePill, StatNumber } from "@/components/brand";
+import { DarkCard, GamePill, StatNumber, StreakBadge } from "@/components/brand";
 import { Toggles } from "@/components/Toggles";
 import { DAILY_GAMES } from "@/lib/games/config";
-import { getStandings, parseMetric, parseRange, RANGES } from "@/lib/standings";
+import {
+  getStandings,
+  getStreaks,
+  parseMetric,
+  parseRange,
+  RANGES,
+} from "@/lib/standings";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +32,10 @@ export default async function ScoreboardPage({
   const sp = await searchParams;
   const range = parseRange(one(sp.range), "7d");
   const metric = parseMetric(one(sp.metric));
-  const { named, eligibleSlots } = await getStandings(range, metric);
+  const [{ named, eligibleSlots }, streakDays] = await Promise.all([
+    getStandings(range, metric),
+    getStreaks(),
+  ]);
 
   const qualified = named.filter((s) => s.qualified);
   const unqualified = named.filter((s) => !s.qualified);
@@ -69,7 +78,13 @@ export default async function ScoreboardPage({
         <>
           <div className="space-y-3">
             {qualified.map((s, i) => (
-              <Row key={s.playerId} rank={i + 1} s={s} eligible={eligibleSlots} />
+              <Row
+                key={s.playerId}
+                rank={i + 1}
+                s={s}
+                eligible={eligibleSlots}
+                streak={streakDays.get(s.playerId)}
+              />
             ))}
           </div>
 
@@ -79,7 +94,13 @@ export default async function ScoreboardPage({
                 Not ranked &mdash; fewer than half the eligible days.
               </p>
               {unqualified.map((s) => (
-                <Row key={s.playerId} s={s} eligible={eligibleSlots} muted />
+                <Row
+                  key={s.playerId}
+                  s={s}
+                  eligible={eligibleSlots}
+                  streak={streakDays.get(s.playerId)}
+                  muted
+                />
               ))}
             </div>
           )}
@@ -99,11 +120,13 @@ function Row({
   s,
   rank,
   eligible,
+  streak,
   muted = false,
 }: {
   s: Named;
   rank?: number;
   eligible: number;
+  streak?: number;
   muted?: boolean;
 }) {
   return (
@@ -111,7 +134,7 @@ function Row({
       {/* Fixed two-line structure so every row is the same height regardless of
           how many games the player has played. */}
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-        <div className="flex items-baseline gap-4 w-56 shrink-0">
+        <div className="flex items-baseline gap-4 w-64 shrink-0">
           {rank !== undefined && (
             <span className="text-lead text-muted tabular-nums w-5">{rank}</span>
           )}
@@ -125,6 +148,7 @@ function Row({
           ) : (
             <span className="text-lead font-bold">Unknown</span>
           )}
+          <StreakBadge days={streak} />
         </div>
 
         <StatNumber className="w-44 shrink-0">{fmt(s.average)}</StatNumber>
