@@ -169,6 +169,7 @@ Scoreboard timezone is `America/Denver` (`SCOREBOARD_TZ`).
   *regenerated* the backfill's tile art (Krillion alternates fish/bubbles, every
   MapTap round is `:dart:`), so for those rows the hover breakdown
   (`lib/games/breakdown.ts`) shows only the numbers, and Krillion shows nothing.
+  Globle never has one: its guess count is the score and the tiles add nothing.
   `getScores` turns the column into an `artVerified` boolean so the paste
   never reaches a page.
 - **Unique on `(player_id, game, puzzle_date)`.** Keyed on date, not puzzle number

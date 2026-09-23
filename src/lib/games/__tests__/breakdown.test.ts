@@ -84,23 +84,10 @@ describe("breakdownFor", () => {
   });
 
   describe("Globle", () => {
-    it("renders tiles across a wrapped row, plus the streak line", () => {
-      expect(breakdownFor(detailOf("globle-wrapped-two-line-row.txt"), true)?.lines).toEqual([
-        "⬜🟨🟥🟧🟥🟧🟧🟧🟩",
-        "Streak 3 · avg 9.67 guesses",
-      ]);
-    });
-
-    it("keeps only the streak line for historic rows", () => {
-      expect(breakdownFor(detailOf("globle-wrapped-two-line-row.txt"), false)?.lines).toEqual([
-        "Streak 3 · avg 9.67 guesses",
-      ]);
-    });
-
-    it("is null for a typed score", () => {
-      const d = detailOf("globle-freeform-in-9.txt");
-      expect(d).toMatchObject({ kind: "globle", freeform: true });
-      expect(breakdownFor(d, true)).toBeNull();
+    it("never has a breakdown, tiled or typed", () => {
+      expect(breakdownFor(detailOf("globle-wrapped-two-line-row.txt"), true)).toBeNull();
+      expect(breakdownFor(detailOf("globle-with-stats-header.txt"), false)).toBeNull();
+      expect(breakdownFor(detailOf("globle-freeform-in-9.txt"), true)).toBeNull();
     });
   });
 

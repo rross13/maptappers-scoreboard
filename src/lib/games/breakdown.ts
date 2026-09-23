@@ -53,15 +53,9 @@ export function breakdownFor(
     }
 
     case "globle":
-      if (withArt && detail.tiles.length > 0) lines.push(tileRow(detail.tiles));
-      if (detail.streak !== undefined) {
-        lines.push(
-          detail.lifetimeAvgGuesses === undefined
-            ? `Streak ${detail.streak}`
-            : `Streak ${detail.streak} · avg ${detail.lifetimeAvgGuesses} guesses`,
-        );
-      }
-      break;
+      // Deliberately none: the guess count is the score, and the tiles only
+      // restate it.
+      return null;
 
     case "fermi":
       detail.rounds.forEach((r, i) => {
