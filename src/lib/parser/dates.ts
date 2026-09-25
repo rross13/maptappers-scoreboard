@@ -36,6 +36,15 @@ export function addDays(d: CivilDate, n: number): CivilDate {
   return civil(dt.getUTCFullYear(), dt.getUTCMonth() + 1, dt.getUTCDate());
 }
 
+/** A strict YYYY-MM-DD that names a real day, or null. For untrusted input
+ *  such as a query string; `asCivil` trusts its argument. */
+export function parseCivil(s: string | undefined): CivilDate | null {
+  if (!s || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+  const d = asCivil(s);
+  // Date.UTC rolls 2026-02-30 over into March, so a round trip catches it.
+  return addDays(d, 0) === d ? d : null;
+}
+
 /** Positive when `a` is after `b`. */
 export function daysBetween(a: CivilDate, b: CivilDate): number {
   return Math.round(

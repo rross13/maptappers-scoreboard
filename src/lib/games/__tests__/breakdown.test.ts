@@ -84,9 +84,17 @@ describe("breakdownFor", () => {
   });
 
   describe("Globle", () => {
-    it("never has a breakdown, tiled or typed", () => {
-      expect(breakdownFor(detailOf("globle-wrapped-two-line-row.txt"), true)).toBeNull();
+    it("renders the guess tiles as one row, even when the paste wrapped them", () => {
+      expect(breakdownFor(detailOf("globle-wrapped-two-line-row.txt"), true)?.lines).toEqual([
+        "⬜🟨🟥🟧🟥🟧🟧🟧🟩",
+      ]);
+    });
+
+    it("has nothing to show for historic rows — tiles are its only detail", () => {
       expect(breakdownFor(detailOf("globle-with-stats-header.txt"), false)).toBeNull();
+    });
+
+    it("has nothing to show for a typed score", () => {
       expect(breakdownFor(detailOf("globle-freeform-in-9.txt"), true)).toBeNull();
     });
   });

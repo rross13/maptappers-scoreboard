@@ -177,8 +177,8 @@ Scoreboard timezone is `America/Denver` (`SCOREBOARD_TZ`).
 - **Emoji art shows only when `raw_paste` is present.** `build-history.py`
   *regenerated* the backfill's tile art (Krillion alternates fish/bubbles, every
   MapTap round is `:dart:`), so for those rows the hover breakdown
-  (`lib/games/breakdown.ts`) shows only the numbers, and Krillion shows nothing.
-  Globle never has one: its guess count is the score and the tiles add nothing.
+  (`lib/games/breakdown.ts`) shows only the numbers, and Krillion and Globle
+  show nothing — tiles are their only detail.
   `getScores` turns the column into an `artVerified` boolean so the paste
   never reaches a page.
 - **Unique on `(player_id, game, puzzle_date)`.** Keyed on date, not puzzle number
@@ -222,7 +222,20 @@ original means redoing that — a plain `-transparent black` leaves grey fringes
 Note this is a *modified* wordmark, which the corporate brand rules would not
 allow on outward-facing work.
 
-`/` is the day's board, and submitting happens in a dialog behind its
+`/` is the day's board; `?date=` steps back through earlier days (never
+forward past today — a future or malformed date falls back to today). The
+submit dialog always works on *today* whatever day is on screen, so the page
+fetches today's scores separately for its locks.
+
+Table sorting lives in the URL as `?sort=key` / `?sort=-key`, so headers are
+plain links and need no client JS. Column definitions are in `lib/board.ts`:
+every score column's natural order is best-first by `direction`, and a missing
+score sorts last in both directions.
+
+The scoreboard's bar chart plots whichever metric is selected, one series in
+the page accent with names on the rows, for the colour reason below.
+
+Submitting happens in a dialog behind the board's
 "Play & Submit" button. `SubmitModal` uses the native `<dialog>`, so focus
 trapping, Esc-to-close and inerting the page come from the platform — don't
 replace it with a div and hand-rolled key handlers. It deliberately stays open

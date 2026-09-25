@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { PARTICIPATION_FLOOR, groupIntoSlots, standings, type Slot } from "../aggregate";
+import {
+  PARTICIPATION_FLOOR,
+  groupIntoSlots,
+  metricValue,
+  standings,
+  type Slot,
+} from "../aggregate";
 import { scoreSlot } from "../z";
 import type { GameSlug } from "@/lib/games/config";
 
@@ -86,6 +92,16 @@ describe("standings", () => {
     const adj = standings(slots, "adj").standings;
     // Shrinkage pulls every record toward zero, so |adjusted| < |average|.
     for (const s of adj) expect(Math.abs(s.adjusted)).toBeLessThan(Math.abs(s.average) + 1e-9);
+  });
+
+  it("reads the value each metric ranks on", () => {
+    const [s] = standings([slot("maptap", "2026-09-17", { a: 950, b: 700 })]).standings;
+    expect(metricValue(s, "avg")).toBe(s.average);
+    expect(metricValue(s, "total")).toBe(s.total);
+    expect(metricValue(s, "adj")).toBe(s.adjusted);
+    // With one entry the average is the total; only the shrinkage moves it.
+    expect(s.total).toBe(s.average);
+    expect(s.adjusted).not.toBe(s.average);
   });
 
   it("breaks standings down per game", () => {

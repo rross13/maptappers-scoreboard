@@ -10,6 +10,7 @@ import {
   inferYear,
   asCivil,
   monthFromName,
+  parseCivil,
 } from "../dates";
 import { parsePaste } from "..";
 import { fixture, SUBMITTED_AT } from "./fixtures";
@@ -77,6 +78,17 @@ describe("registry", () => {
 });
 
 describe("dates", () => {
+  it("parseCivil accepts only a real YYYY-MM-DD", () => {
+    expect(parseCivil("2026-09-24")).toBe("2026-09-24");
+    expect(parseCivil("2028-02-29")).toBe("2028-02-29");
+    expect(parseCivil("2026-02-29")).toBeNull();
+    expect(parseCivil("2026-13-01")).toBeNull();
+    expect(parseCivil("2026-9-24")).toBeNull();
+    expect(parseCivil("2026-09-24T00:00")).toBeNull();
+    expect(parseCivil("")).toBeNull();
+    expect(parseCivil(undefined)).toBeNull();
+  });
+
   it("has internally consistent puzzle epochs", () => {
     expect(() => assertEpochsConsistent()).not.toThrow();
   });

@@ -33,6 +33,11 @@ export interface Standing {
 
 export type Metric = "avg" | "total" | "adj";
 
+/** The number a metric ranks on — what the board shows and sorts by. */
+export function metricValue(s: Standing, metric: Metric): number {
+  return metric === "total" ? s.total : metric === "adj" ? s.adjusted : s.average;
+}
+
 export function standings(
   slots: Slot[],
   metric: Metric = "avg",
@@ -71,12 +76,9 @@ export function standings(
     ),
   }));
 
-  const key = (s: Standing) =>
-    metric === "total" ? s.total : metric === "adj" ? s.adjusted : s.average;
-
   // Unqualified players still appear, but always below the qualified ones.
   out.sort((a, b) =>
-    a.qualified !== b.qualified ? (a.qualified ? -1 : 1) : key(b) - key(a),
+    a.qualified !== b.qualified ? (a.qualified ? -1 : 1) : metricValue(b, metric) - metricValue(a, metric),
   );
 
   return { standings: out, eligibleSlots: eligible.length };

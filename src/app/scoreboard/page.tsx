@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { DarkCard, GamePill, StatNumber, StreakBadge } from "@/components/brand";
+import { StandingsChart } from "@/components/StandingsChart";
 import { Toggles } from "@/components/Toggles";
 import { DAILY_GAMES } from "@/lib/games/config";
+import { metricValue, type Metric } from "@/lib/scoring/aggregate";
 import {
   getStandings,
   getStreaks,
@@ -12,11 +14,17 @@ import {
 
 export const dynamic = "force-dynamic";
 
-const METRICS = [
+const METRICS: { key: Metric; label: string }[] = [
   { key: "avg", label: "Average" },
   { key: "total", label: "Total" },
   { key: "adj", label: "Adjusted" },
 ];
+
+const METRIC_NAME: Record<Metric, string> = {
+  avg: "average",
+  total: "total",
+  adj: "adjusted",
+};
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -52,6 +60,11 @@ export default async function ScoreboardPage({
           better than the group. Fermi is compared on a log scale. Days when only
           one person played don&rsquo;t count.
         </p>
+        <p className="text-body text-muted max-w-2xl mt-2">
+          Total adds up your days, so it rewards playing more. Adjusted pulls a
+          short record toward zero. When everyone plays most days, all three
+          rank people the same way.
+        </p>
       </div>
 
       <div className="flex flex-wrap gap-6">
@@ -76,12 +89,27 @@ export default async function ScoreboardPage({
         </DarkCard>
       ) : (
         <>
+          <DarkCard>
+            <StandingsChart
+              label={`Each player's ${METRIC_NAME[metric]} z, against the group at zero`}
+              format={fmt}
+              rows={[...qualified, ...unqualified].map((s) => ({
+                id: s.playerId,
+                name: s.player?.displayName ?? "Unknown",
+                value: metricValue(s, metric),
+                muted: !s.qualified,
+                detail: `${s.entries} of ${eligibleSlots} entries${s.qualified ? "" : ", not ranked"}`,
+              }))}
+            />
+          </DarkCard>
+
           <div className="space-y-3">
             {qualified.map((s, i) => (
               <Row
                 key={s.playerId}
                 rank={i + 1}
                 s={s}
+                metric={metric}
                 eligible={eligibleSlots}
                 streak={streakDays.get(s.playerId)}
               />
@@ -97,6 +125,7 @@ export default async function ScoreboardPage({
                 <Row
                   key={s.playerId}
                   s={s}
+                  metric={metric}
                   eligible={eligibleSlots}
                   streak={streakDays.get(s.playerId)}
                   muted
@@ -118,12 +147,14 @@ type Named = Awaited<ReturnType<typeof getStandings>>["named"][number];
 
 function Row({
   s,
+  metric,
   rank,
   eligible,
   streak,
   muted = false,
 }: {
   s: Named;
+  metric: Metric;
   rank?: number;
   eligible: number;
   streak?: number;
@@ -151,10 +182,16 @@ function Row({
           <StreakBadge days={streak} />
         </div>
 
-        <StatNumber className="w-44 shrink-0">{fmt(s.average)}</StatNumber>
+        <StatNumber className="w-44 shrink-0">{fmt(metricValue(s, metric))}</StatNumber>
 
+        {/* The two metrics not ranked on, so switching the toggle visibly moves
+            one number into the big slot. */}
         <div className="text-label text-muted space-y-0.5">
-          <div>total {fmt(s.total)}</div>
+          <div>
+            {METRICS.filter((m) => m.key !== metric)
+              .map((m) => `${METRIC_NAME[m.key]} ${fmt(metricValue(s, m.key))}`)
+              .join(" · ")}
+          </div>
           <div>
             {s.entries} of {eligible} entries
           </div>

@@ -1,10 +1,13 @@
 import { notFound } from "next/navigation";
 import { DarkCard, GameTabLinks, SectionTitle } from "@/components/brand";
 import { ScoreBreakdown } from "@/components/ScoreBreakdown";
+import { SortHeader } from "@/components/SortHeader";
 import { Toggles } from "@/components/Toggles";
+import { GAME_DEFAULT_SORT, gameColumns } from "@/lib/board";
 import { breakdownFor } from "@/lib/games/breakdown";
 import { GAMES, isGameSlug } from "@/lib/games/config";
 import { getPlayers, getScores } from "@/lib/queries";
+import { parseSort, sortRows } from "@/lib/sort";
 import { buildSlots, parseRange, rangeBounds, RANGES } from "@/lib/standings";
 
 export const dynamic = "force-dynamic";
@@ -59,14 +62,25 @@ export default async function GamePage({
       const best = cfg.direction === 1 ? Math.max(...raws) : Math.min(...raws);
       return {
         player: p,
+        name: p.displayName,
         entries: mine.length,
         avgRaw: raws.reduce((a, b) => a + b, 0) / raws.length,
         best,
         avgZ: zs.length ? zs.reduce((a, b) => a + b, 0) / zs.length : null,
       };
     })
-    .filter((x): x is NonNullable<typeof x> => x !== null)
-    .sort((a, b) => (b.avgZ ?? -Infinity) - (a.avgZ ?? -Infinity));
+    .filter((x): x is NonNullable<typeof x> => x !== null);
+
+  const columns = gameColumns<(typeof perPlayer)[number]>(slug);
+  const sort = parseSort(one(sp.sort), columns.map((c) => c.key), GAME_DEFAULT_SORT);
+  const col = (key: string) => columns.find((c) => c.key === key)!;
+  const sorted = sortRows(perPlayer, col(sort.key), sort);
+  const href = (params: { range?: string; sort?: string }) => {
+    const q = new URLSearchParams({ range: params.range ?? range });
+    const s = params.sort ?? one(sp.sort);
+    if (s && s !== GAME_DEFAULT_SORT) q.set("sort", s);
+    return `/games/${slug}?${q}`;
+  };
 
   return (
     <div data-accent={cfg.accent} className="space-y-8">
@@ -78,7 +92,7 @@ export default async function GamePage({
       <Toggles
         options={RANGES.map((r) => ({ key: r.key, label: r.label }))}
         active={range}
-        hrefFor={(k) => `/games/${slug}?range=${k}`}
+        hrefFor={(k) => href({ range: k })}
       />
 
       {rows.length === 0 ? (
@@ -93,15 +107,29 @@ export default async function GamePage({
               <table className="w-full text-body border-collapse">
                 <thead>
                   <tr className="text-label text-muted">
-                    <th className="text-left font-bold p-4">Player</th>
-                    <th className="text-right font-bold p-4">Avg z</th>
-                    <th className="text-right font-bold p-4">Avg score</th>
-                    <th className="text-right font-bold p-4">Best</th>
-                    <th className="text-right font-bold p-4">Played</th>
+                    {(
+                      [
+                        ["player", "Player", "left"],
+                        ["z", "Avg z", "right"],
+                        ["avg", "Avg score", "right"],
+                        ["best", "Best", "right"],
+                        ["played", "Played", "right"],
+                      ] as const
+                    ).map(([key, label, align]) => (
+                      <SortHeader
+                        key={key}
+                        column={col(key)}
+                        state={sort}
+                        href={(s) => href({ sort: s })}
+                        align={align}
+                      >
+                        {label}
+                      </SortHeader>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {perPlayer.map((r) => (
+                  {sorted.map((r) => (
                     <tr key={r.player.id} className="border-t border-surface-raised">
                       <td className="p-4 whitespace-nowrap">{r.player.displayName}</td>
                       <td className="p-4 text-right tabular-nums">

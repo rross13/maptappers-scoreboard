@@ -53,9 +53,10 @@ export function breakdownFor(
     }
 
     case "globle":
-      // Deliberately none: the guess count is the score, and the tiles only
-      // restate it.
-      return null;
+      // Tiles only. The guess count is already the score, so there are no
+      // numbers to add, and a typed score has no tiles at all.
+      if (withArt && detail.tiles.length > 0) lines.push(tileRow(detail.tiles));
+      break;
 
     case "fermi":
       detail.rounds.forEach((r, i) => {
