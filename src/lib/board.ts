@@ -34,6 +34,21 @@ export function dayColumns<T extends DayRow>(): SortColumn<T>[] {
   ];
 }
 
+/**
+ * Each daily game's best score on the board, by `direction`. A game only one
+ * player logged has no entry: the same rule as a slot with n = 1, which earns no
+ * z. A trophy for playing alone would go to whoever posts first.
+ */
+export function bestScores(rows: DayRow[]): Partial<Record<GameSlug, number>> {
+  const best: Partial<Record<GameSlug, number>> = {};
+  for (const g of DAILY_GAMES) {
+    const scores = rows.flatMap((r) => r.scores[g.slug] ?? []);
+    if (scores.length < 2) continue;
+    best[g.slug] = g.direction === 1 ? Math.max(...scores) : Math.min(...scores);
+  }
+  return best;
+}
+
 export interface GameStandingRow {
   name: string;
   avgZ: number | null;

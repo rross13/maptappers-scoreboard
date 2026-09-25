@@ -4,7 +4,7 @@ import { ScoreBreakdown } from "@/components/ScoreBreakdown";
 import { SortHeader } from "@/components/SortHeader";
 import { SubmitModal } from "@/components/SubmitModal";
 import { DarkCard, GamePill, StreakBadge } from "@/components/brand";
-import { DAY_DEFAULT_SORT, dayColumns } from "@/lib/board";
+import { bestScores, DAY_DEFAULT_SORT, dayColumns } from "@/lib/board";
 import { breakdownFor } from "@/lib/games/breakdown";
 import { DAILY_GAMES, formatScore, type GameSlug } from "@/lib/games/config";
 import { getPlayers, getScores } from "@/lib/queries";
@@ -58,6 +58,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Search
     };
   });
   const sorted = sortRows(rows, columns.find((c) => c.key === sort.key)!, sort);
+  const best = bestScores(rows);
 
   // What each player has already logged today, which is what locks a tab in the
   // submit dialog. Seven players times five games — small enough to hand over
@@ -159,11 +160,25 @@ export default async function TodayPage({ searchParams }: { searchParams: Search
                     return (
                       <td key={g.slug} className="p-4 text-center tabular-nums">
                         {row ? (
-                          <ScoreBreakdown
-                            lines={breakdownFor(row.detail, row.artVerified)?.lines ?? null}
-                          >
-                            {formatScore(g.slug, row.rawScore)}
-                          </ScoreBreakdown>
+                          // The trophy hangs outside the number's box, so a winning
+                          // score lines up with the rest of its column.
+                          <span className="relative">
+                            {row.rawScore === best[g.slug] && (
+                              <span
+                                role="img"
+                                aria-label="Best score of the day"
+                                title="Best score of the day"
+                                className="absolute right-full mr-1.5"
+                              >
+                                🏆
+                              </span>
+                            )}
+                            <ScoreBreakdown
+                              lines={breakdownFor(row.detail, row.artVerified)?.lines ?? null}
+                            >
+                              {formatScore(g.slug, row.rawScore)}
+                            </ScoreBreakdown>
+                          </span>
                         ) : (
                           <span className="text-muted">&mdash;</span>
                         )}

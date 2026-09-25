@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayColumns, gameColumns, type DayRow, type GameStandingRow } from "../board";
+import { bestScores, dayColumns, gameColumns, type DayRow, type GameStandingRow } from "../board";
 import { parseSort, sortRows } from "../sort";
 
 const day: DayRow[] = [
@@ -38,6 +38,36 @@ describe("day board columns", () => {
   it("sorts names A→Z, and Z→A reversed", () => {
     expect(sortDay("player")).toEqual(["Ana", "Ben", "Cat", "Dan"]);
     expect(sortDay("-player")).toEqual(["Dan", "Cat", "Ben", "Ana"]);
+  });
+});
+
+describe("day's best scores", () => {
+  it("takes the highest where higher is better and the lowest where lower is", () => {
+    const best = bestScores(day);
+    expect(best.maptap).toBe(950);
+    expect(best.globle).toBe(3);
+  });
+
+  it("awards nothing for a game only one player logged", () => {
+    const rows: DayRow[] = [
+      { name: "Ana", streak: undefined, scores: { fermi: 2.5, krillion: 40 } },
+      { name: "Ben", streak: undefined, scores: { krillion: 55 } },
+    ];
+    expect(bestScores(rows).fermi).toBeUndefined();
+    expect(bestScores(rows).krillion).toBe(55);
+  });
+
+  it("awards nothing for a game nobody logged", () => {
+    expect(bestScores(day).size_it_up).toBeUndefined();
+  });
+
+  it("returns the shared value on a tie, so every tied player matches it", () => {
+    const rows: DayRow[] = [
+      { name: "Ana", streak: undefined, scores: { fermi: 1.5 } },
+      { name: "Ben", streak: undefined, scores: { fermi: 1.5 } },
+      { name: "Cat", streak: undefined, scores: { fermi: 4 } },
+    ];
+    expect(bestScores(rows).fermi).toBe(1.5);
   });
 });
 
