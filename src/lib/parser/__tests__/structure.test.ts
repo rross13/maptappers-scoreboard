@@ -75,6 +75,14 @@ describe("registry", () => {
       expect(matched, `${file} should match only ${game}`).toEqual([game]);
     }
   });
+
+  it("matches the dated Size It Up layout only with Size It Up", () => {
+    const lines = normalize(fixture("sizeitup-magnitudle-dated.txt")).split("\n");
+    const matched = FIRST_PASS.filter((def) =>
+      def.anchors.some((re) => lines.some((line) => re.test(line))),
+    ).map((d) => d.game);
+    expect(matched).toEqual(["size_it_up"]);
+  });
 });
 
 describe("dates", () => {

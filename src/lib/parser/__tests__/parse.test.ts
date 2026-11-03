@@ -126,6 +126,53 @@ describe("Size It Up", () => {
     expect(e.dateConfidence).toBe("assumed");
     expect(e.puzzleDate).toBe("2026-09-18");
   });
+
+  describe("dated Magnitudle layout", () => {
+    const ON_THE_DAY = new Date("2026-11-03T16:30:00Z");
+    const parseOnTheDay = (text: string) =>
+      parsePaste(text, { submittedAt: ON_THE_DAY });
+
+    it("reads the score and per-row numbers", () => {
+      const r = parseOnTheDay(fixture("sizeitup-magnitudle-dated.txt"));
+      expect(r.status).toBe("ok");
+      expect(r.entries).toHaveLength(1);
+      const e = r.entries[0];
+      expect(e.game).toBe("size_it_up");
+      expect(e.score).toBe(203);
+      expect(e.detail).toMatchObject({
+        kind: "size_it_up",
+        variant: "grid5",
+        rowScores: [34, 0, 88, 23, 58],
+      });
+      expect(e.issues).toHaveLength(0);
+    });
+
+    it("takes the date from the text instead of assuming it", () => {
+      const e = parseOnTheDay(fixture("sizeitup-magnitudle-dated.txt")).entries[0];
+      expect(e.puzzleDate).toBe("2026-11-03");
+      expect(e.puzzleDateSource).toBe("explicit");
+      expect(e.dateConfidence).toBe("high");
+    });
+
+    it("keeps its own date over a sibling's", () => {
+      // Globle fixture is dated 2026-09-18; Size It Up's own line must win.
+      const r = parseOnTheDay(
+        fixture("globle-with-stats-header.txt") +
+          "\n" +
+          fixture("sizeitup-magnitudle-dated.txt"),
+      );
+      const siu = r.entries.find((e) => e.game === "size_it_up")!;
+      expect(siu.puzzleDate).toBe("2026-11-03");
+      expect(siu.puzzleDateSource).toBe("explicit");
+    });
+
+    it("warns when the printed date is in the future", () => {
+      // SUBMITTED_AT is 2026-09-18, well before the fixture's date.
+      const e = parse("sizeitup-magnitudle-dated.txt").entries[0];
+      expect(e.score).toBe(203);
+      expect(e.issues.map((i) => i.code)).toContain("future-date");
+    });
+  });
 });
 
 describe("Globle", () => {

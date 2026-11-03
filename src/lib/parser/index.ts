@@ -63,7 +63,7 @@ function looksLikeGame(text: string): boolean {
 }
 
 /**
- * Size It Up prints neither a date nor a puzzle number. Most real pastes carry
+ * Older Size It Up shares print neither a date nor a puzzle number. Most real pastes carry
  * several games at once, so the date of a confidently-dated sibling is a far
  * better guess than the submission day.
  */

@@ -145,7 +145,7 @@ computed on read.
 | Globle | explicit in the text |
 | MapTap | month + day, no year — nearest-distance year inference |
 | Krillion, Fermi | puzzle number vs. a verified epoch |
-| Size It Up | **nothing at all** — sibling inference, then submission day |
+| Size It Up | explicit since Nov 2026 (`Magnitudle — Size It Up` layout); older shares print **nothing** — sibling inference, then submission day |
 
 `PUZZLE_EPOCHS` holds **two** anchors per game and `assertEpochsConsistent()`
 cross-checks them, so a typo fails a test instead of shifting every historical
@@ -332,8 +332,9 @@ just by the disabled button.
 - **Rows from before `raw_paste` show numbers only** in the hover, even real web
   submissions whose art was genuine. Size It Up rows from before `grid` was
   captured in `meta` fall back to row scores.
-- **Size It Up prints no date.** Sibling inference is the real mitigation; the UI
-  marks assumed dates as editable.
+- **Older Size It Up shares print no date.** The dated `Magnitudle — Size It Up`
+  layout fixes this going forward; for old-layout pastes, sibling inference is the
+  real mitigation and the UI marks assumed dates as editable.
 - **Krillion ∞ can no longer be submitted through the UI.** The tabs cover the
   five daily games only, and `onlyGame` scoping means a ∞ paste matches no tab.
   The parser still reads it and the panel names it explicitly rather than

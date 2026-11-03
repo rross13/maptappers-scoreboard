@@ -1,9 +1,15 @@
 import type { GameDefinition, GameParseResult } from "../types";
+import { civilDateIn, daysBetween, parseCivil } from "../dates";
+import type { CivilDate } from "../types";
 import { blockText, findLine, issue } from "./helpers";
 
 const SQ = "(?::(?:large_red_square|white_large_square):)";
-const ANCHOR_TITLE = /^Size It Up$/m;
-const ANCHOR_SCORE = /^Overall Score\s+(\d{1,3})$/m;
+/** Older share text titles the block "Size It Up" and prints no date; since
+ *  November 2026 it reads "Magnitudle — Size It Up" with an ISO date under it.
+ *  Both stay so stored rows from either era re-parse. */
+const ANCHOR_TITLE = /^(?:Magnitudle — )?Size It Up$/m;
+const ANCHOR_SCORE = /^(?:Overall Score\s+|Score:\s*)(\d{1,3})(?:\/500)?$/m;
+const DATE_LINE = /^(\d{4}-\d{2}-\d{2})$/;
 
 /** Newer layout: five squares then the row's own score. */
 const ROW_GRID5 = new RegExp(`^(${SQ}{5})\\s+(\\d{1,3})$`);
@@ -14,12 +20,13 @@ export const sizeItUp: GameDefinition = {
   game: "size_it_up",
   displayName: "Size It Up",
   anchors: [ANCHOR_TITLE, ANCHOR_SCORE],
-  /** Title and "Overall Score" are separate anchors a line apart; collapse them. */
+  /** Title and score are separate anchors (one line apart in the old layout,
+   *  three in the dated one); collapse them. */
   mergeWindow: 3,
   maxBlockLines: 12,
   priority: 50,
 
-  parse(block): GameParseResult {
+  parse(block, ctx): GameParseResult {
     const scoreIdx = findLine(block, ANCHOR_SCORE, 0, 4);
     if (scoreIdx === -1) {
       return {
@@ -29,7 +36,7 @@ export const sizeItUp: GameDefinition = {
           issue(
             "missing-score",
             "error",
-            "Found Size It Up but no “Overall Score” line.",
+            "Found Size It Up but no score line.",
             { game: "size_it_up", line: block.startLine },
           ),
         ],
@@ -38,6 +45,28 @@ export const sizeItUp: GameDefinition = {
 
     const overall = Number(ANCHOR_SCORE.exec(block.lines[scoreIdx])![1]);
     const issues = [];
+
+    let puzzleDate: CivilDate | null = null;
+    let dateLine = -1;
+    for (let i = 0; i < scoreIdx; i++) {
+      const m = DATE_LINE.exec(block.lines[i]);
+      if (m) {
+        puzzleDate = parseCivil(m[1]);
+        dateLine = i;
+        break;
+      }
+    }
+    if (
+      puzzleDate &&
+      daysBetween(puzzleDate, civilDateIn(ctx.submittedAt, ctx.timeZone)) > 1
+    ) {
+      issues.push(
+        issue("future-date", "warning", "That date is in the future.", {
+          game: "size_it_up",
+          line: block.startLine + dateLine,
+        }),
+      );
+    }
 
     const rowScores: number[] = [];
     const grid: string[][] = [];
@@ -120,12 +149,20 @@ export const sizeItUp: GameDefinition = {
         displayName: "Size It Up",
         score: overall,
         scoreConfidence: "high",
-        // Size It Up prints no date and no puzzle number. The pipeline fills
-        // this in from a sibling game in the same paste when it can, and falls
-        // back to the submission day; both are marked assumed until then.
-        puzzleDate: "" as never,
-        puzzleDateSource: "submission-date",
-        dateConfidence: "assumed",
+        // The older layout prints no date. The pipeline fills an empty one in
+        // from a sibling game in the same paste when it can, and falls back to
+        // the submission day.
+        ...(puzzleDate
+          ? {
+              puzzleDate,
+              puzzleDateSource: "explicit" as const,
+              dateConfidence: "high" as const,
+            }
+          : {
+              puzzleDate: "" as never,
+              puzzleDateSource: "submission-date" as const,
+              dateConfidence: "assumed" as const,
+            }),
         detail: {
           kind: "size_it_up",
           variant: variant ?? "grid5",

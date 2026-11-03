@@ -5,11 +5,11 @@ import type { GameSlug } from "@/lib/games/config";
 export type CivilDate = string & { readonly __civil: unique symbol };
 
 export type DateSource =
-  | "explicit" // Globle prints a full date
+  | "explicit" // Globle, and Size It Up since Nov 2026, print a full date
   | "inferred-year" // MapTap prints month + day only
   | "puzzle-number" // Krillion, Fermi
-  | "sibling-inference" // Size It Up, borrowed from another game in the paste
-  | "submission-date"; // Size It Up, last resort
+  | "sibling-inference" // older Size It Up, borrowed from another game in the paste
+  | "submission-date"; // older Size It Up, last resort
 
 export type Confidence = "high" | "assumed" | "low";
 
