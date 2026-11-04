@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, type ReactNode } from "react";
+import { placePanel } from "@/lib/popover";
 
 /**
  * A score that reveals its per-round breakdown on hover, focus or tap.
@@ -29,13 +30,17 @@ export function ScoreBreakdown({
     const t = trigger.current;
     const p = panel.current;
     if (!t || !p) return;
-    const r = t.getBoundingClientRect();
-    const w = p.getBoundingClientRect().width;
-    p.style.top = `${r.bottom + 8}px`;
-    p.style.left = `${Math.min(
-      Math.max(8, r.left + r.width / 2 - w / 2),
-      window.innerWidth - w - 8,
-    )}px`;
+    // Cleared first so a cap from the last placement doesn't skew the measure.
+    p.style.maxHeight = "";
+    const { width, height } = p.getBoundingClientRect();
+    const { top, left, maxHeight } = placePanel(
+      t.getBoundingClientRect(),
+      { width, height },
+      { width: window.innerWidth, height: window.innerHeight },
+    );
+    p.style.top = `${top}px`;
+    p.style.left = `${left}px`;
+    if (maxHeight !== null) p.style.maxHeight = `${maxHeight}px`;
   };
 
   const open = () => {
@@ -88,7 +93,7 @@ export function ScoreBreakdown({
         id={id}
         popover="manual"
         role="tooltip"
-        className="fixed inset-auto m-0 rounded-tile border border-muted bg-surface-raised text-paper px-4 py-3 text-body leading-relaxed text-left whitespace-pre tabular-nums"
+        className="fixed inset-auto m-0 overflow-y-auto rounded-tile border border-muted bg-surface-raised text-paper px-4 py-3 text-body leading-relaxed text-left whitespace-pre tabular-nums"
       >
         {lines.join("\n")}
       </div>
