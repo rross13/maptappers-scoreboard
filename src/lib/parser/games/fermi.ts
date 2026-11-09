@@ -3,7 +3,8 @@ import { civilDateIn, dateFromPuzzleNumber, daysBetween } from "../dates";
 import { blockText, issue, parseNumber } from "./helpers";
 
 const ANCHOR = /^Fermi\s*(?:[·•|–—-]\s*)?No\.\s*(\d+)$/m;
-const ROUND = /^(\d{2})\s+([\d,]+(?:\.\d+)?)\s*[×x]$/;
+// Shares from No. ~103 put an over/under arrow before each round's value.
+const ROUND = /^(\d{2})\s+(?:[↑↓]\s*)?([\d,]+(?:\.\d+)?)\s*[×x]$/;
 const TOTAL =
   /^([\d,]+(?:\.\d+)?)\s*[×x]\s*score\s*[·•|]\s*top\s+(\d{1,3})%$/;
 const TOTAL_LOOSE = /^([\d,]+(?:\.\d+)?)\s*[×x]\b.*?\btop\s+(\d{1,3})%/;

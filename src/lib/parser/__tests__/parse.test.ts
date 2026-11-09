@@ -255,6 +255,23 @@ describe("Fermi", () => {
     if (e.detail?.kind === "fermi") expect(e.detail.rounds).toContain(266667);
   });
 
+  it("parses rounds with direction arrows", () => {
+    const r = parsePaste(fixture("fermi-direction-arrows.txt"), {
+      submittedAt: new Date("2026-11-06T21:58:37Z"),
+    });
+    expect(r.failures).toHaveLength(0);
+    const e = r.entries[0];
+    expect(e.score).toBeCloseTo(1.56);
+    expect(e.puzzleNumber).toBe(103);
+    expect(e.puzzleDate).toBe("2026-11-06");
+    expect(e.issues).toEqual([]);
+    expect(e.detail).toMatchObject({
+      kind: "fermi",
+      rounds: [1.3, 2.61, 1.11],
+      percentile: 9,
+    });
+  });
+
   it("reports a missing total line", () => {
     const r = parse("fermi-missing-total-line.txt");
     expect(r.entries).toHaveLength(0);
