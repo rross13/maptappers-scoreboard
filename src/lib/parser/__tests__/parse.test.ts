@@ -272,6 +272,23 @@ describe("Fermi", () => {
     });
   });
 
+  it("parses an exact round marked with =", () => {
+    const r = parsePaste(fixture("fermi-exact-round.txt"), {
+      submittedAt: new Date("2026-11-11T20:00:00Z"),
+    });
+    expect(r.failures).toHaveLength(0);
+    const e = r.entries[0];
+    expect(e.score).toBeCloseTo(12.8);
+    expect(e.puzzleNumber).toBe(108);
+    expect(e.puzzleDate).toBe("2026-11-11");
+    expect(e.issues).toEqual([]);
+    expect(e.detail).toMatchObject({
+      kind: "fermi",
+      rounds: [10.6, 1, 196],
+      percentile: 19,
+    });
+  });
+
   it("reports a missing total line", () => {
     const r = parse("fermi-missing-total-line.txt");
     expect(r.entries).toHaveLength(0);
