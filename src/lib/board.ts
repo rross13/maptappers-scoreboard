@@ -14,7 +14,7 @@ export interface DayRow {
   scores: Partial<Record<GameSlug, number>>;
 }
 
-export const DAY_DEFAULT_SORT = "player";
+export const DAY_DEFAULT_SORT = "streak";
 
 export function dayColumns<T extends DayRow>(): SortColumn<T>[] {
   return [

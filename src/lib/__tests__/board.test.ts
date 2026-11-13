@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bestScores, dayColumns, gameColumns, type DayRow, type GameStandingRow } from "../board";
+import { bestScores, DAY_DEFAULT_SORT, dayColumns, gameColumns, type DayRow, type GameStandingRow } from "../board";
 import { parseSort, sortRows } from "../sort";
 
 const day: DayRow[] = [
@@ -9,9 +9,9 @@ const day: DayRow[] = [
   { name: "Dan", streak: 2, scores: { globle: 12 } },
 ];
 
-function sortDay(raw: string) {
+function sortDay(raw: string | undefined) {
   const cols = dayColumns<DayRow>();
-  const state = parseSort(raw, cols.map((c) => c.key), "player");
+  const state = parseSort(raw, cols.map((c) => c.key), DAY_DEFAULT_SORT);
   return sortRows(day, cols.find((c) => c.key === state.key)!, state).map((r) => r.name);
 }
 
@@ -29,6 +29,24 @@ describe("day board columns", () => {
   it("puts the best score first where lower is better, with no-shows last", () => {
     expect(sortDay("globle")).toEqual(["Cat", "Ana", "Dan", "Ben"]);
     expect(sortDay("-globle")).toEqual(["Dan", "Ana", "Cat", "Ben"]);
+  });
+
+  it("opens sorted by streak, longest first", () => {
+    expect(sortDay(undefined)).toEqual(sortDay("streak"));
+  });
+
+  /** Rows arrive in roster order, which is by name, and the sort is stable. */
+  it("breaks streak ties, including no streak at all, by roster order", () => {
+    const tied: DayRow[] = [
+      { name: "Ana", streak: undefined, scores: {} },
+      { name: "Ben", streak: 3, scores: {} },
+      { name: "Cat", streak: 1, scores: {} },
+      { name: "Dan", streak: 3, scores: {} },
+    ];
+    const cols = dayColumns<DayRow>();
+    const state = parseSort(undefined, cols.map((c) => c.key), DAY_DEFAULT_SORT);
+    const sorted = sortRows(tied, cols.find((c) => c.key === state.key)!, state);
+    expect(sorted.map((r) => r.name)).toEqual(["Ben", "Dan", "Ana", "Cat"]);
   });
 
   it("ranks streaks longest-first and treats sub-badge streaks as none", () => {

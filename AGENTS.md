@@ -242,7 +242,8 @@ fetches today's scores separately for its locks.
 Table sorting lives in the URL as `?sort=key` / `?sort=-key`, so headers are
 plain links and need no client JS. Column definitions are in `lib/board.ts`:
 every score column's natural order is best-first by `direction`, and a missing
-score sorts last in both directions.
+score sorts last in both directions. The day board opens sorted by streak,
+longest first (`DAY_DEFAULT_SORT`); ties keep roster order, which is by name.
 
 The scoreboard's bar chart plots whichever metric is selected, one series in
 the page accent with names on the rows, for the colour reason below.
