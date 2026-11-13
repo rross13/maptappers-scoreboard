@@ -5,6 +5,8 @@ import { asCivil } from "@/lib/parser/dates";
 
 const TODAY = asCivil("2026-09-23");
 const ALL = DAILY_GAMES.map((g) => g.slug);
+/** What a complete day looked like before DailyTens joined on 2026-11-14. */
+const ORIGINAL_FIVE = ALL.filter((g) => g !== "daily_tens");
 
 function days(playerId: string, dates: string[], games: GameSlug[] = ALL): PlayDay[] {
   return dates.flatMap((puzzleDate) => games.map((game) => ({ playerId, game, puzzleDate })));
@@ -34,7 +36,7 @@ describe("streaks", () => {
     expect(streaks(rows, TODAY).has("a")).toBe(false);
   });
 
-  it("needs all five games for a day to count", () => {
+  it("needs every daily game for a day to count", () => {
     const four = ALL.filter((g) => g !== "fermi");
     const rows = [
       ...days("a", ["2026-09-22", "2026-09-23"]),
@@ -69,6 +71,32 @@ describe("streaks", () => {
     ];
     const r = streaks(rows, TODAY);
     expect(Object.fromEntries(r)).toEqual({ a: 2, b: 1 });
+  });
+
+  describe("a game joining partway through", () => {
+    const today = asCivil("2026-11-15");
+
+    it("doesn't require DailyTens on days before it joined", () => {
+      const rows = [
+        ...days("a", ["2026-11-12", "2026-11-13"], ORIGINAL_FIVE),
+        ...days("a", ["2026-11-14", "2026-11-15"]),
+      ];
+      expect(streaks(rows, today).get("a")).toBe(4);
+    });
+
+    it("keeps today's streak alive on the switch-over, counting the old days", () => {
+      const rows = days("a", ["2026-11-11", "2026-11-12", "2026-11-13"], ORIGINAL_FIVE);
+      expect(streaks(rows, asCivil("2026-11-14")).get("a")).toBe(3);
+    });
+
+    it("requires DailyTens from 2026-11-14 on", () => {
+      const rows = [
+        ...days("a", ["2026-11-13"], ORIGINAL_FIVE),
+        ...days("a", ["2026-11-14"], ORIGINAL_FIVE),
+        ...days("a", ["2026-11-15"]),
+      ];
+      expect(streaks(rows, today).get("a")).toBe(1);
+    });
   });
 
   it("returns nothing for no rows", () => {

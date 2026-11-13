@@ -7,7 +7,7 @@ export type CivilDate = string & { readonly __civil: unique symbol };
 export type DateSource =
   | "explicit" // Globle, and Size It Up since Nov 2026, print a full date
   | "inferred-year" // MapTap prints month + day only
-  | "puzzle-number" // Krillion, Fermi
+  | "puzzle-number" // Krillion, Fermi, DailyTens
   | "sibling-inference" // older Size It Up, borrowed from another game in the paste
   | "submission-date"; // older Size It Up, last resort
 
@@ -55,7 +55,8 @@ export type GameDetail =
       lifetimeAvgGuesses?: number;
       freeform: boolean;
     }
-  | { kind: "fermi"; rounds: number[]; percentile?: number };
+  | { kind: "fermi"; rounds: number[]; percentile?: number }
+  | { kind: "daily_tens"; grid: ("trophy" | "x")[][] };
 
 export interface ParsedEntry {
   game: GameSlug;

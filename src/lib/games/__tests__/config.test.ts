@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { DAILY_GAMES, GAMES, GAME_SLUGS, isGameSlug } from "../config";
+import { DAILY_GAMES, GAMES, GAME_SLUGS, formatScore, isGameSlug } from "../config";
+import { parseCivil } from "@/lib/parser/dates";
 
 describe("game config", () => {
   /** The Postgres enum is generated from GAME_SLUGS, so drift here is a bug. */
@@ -23,15 +24,30 @@ describe("game config", () => {
     expect(logged).toEqual(["fermi"]);
   });
 
-  it("exposes the five daily games", () => {
+  it("exposes the six daily games", () => {
     expect(DAILY_GAMES.map((g) => g.slug)).toEqual([
-      "maptap", "krillion", "size_it_up", "globle", "fermi",
+      "maptap", "krillion", "size_it_up", "globle", "fermi", "daily_tens",
     ]);
   });
 
-  it("assigns each daily game a distinct accent", () => {
-    const accents = DAILY_GAMES.map((g) => g.accent);
+  /** Four brand accents can't cover six games. DailyTens sharing MapTap's blue
+   *  is the one deliberate overlap; any other is a mistake. */
+  it("assigns distinct accents apart from DailyTens sharing MapTap's", () => {
+    expect(GAMES.daily_tens.accent).toBe(GAMES.maptap.accent);
+    const accents = DAILY_GAMES.filter((g) => g.slug !== "daily_tens").map((g) => g.accent);
     expect(new Set(accents).size).toBe(accents.length);
+  });
+
+  it("formats DailyTens out of ten", () => {
+    expect(formatScore("daily_tens", 6)).toBe("6/10");
+  });
+
+  /** A malformed date compares wrongly as a string and silently changes streaks. */
+  it("gives streakFrom as a real YYYY-MM-DD", () => {
+    for (const g of DAILY_GAMES) {
+      if (g.streakFrom !== undefined) expect(parseCivil(g.streakFrom)).toBe(g.streakFrom);
+    }
+    expect(GAMES.daily_tens.streakFrom).toBe("2026-11-14");
   });
 
   /** Every URL here is copied out of a real share text; a typo sends the team

@@ -5,7 +5,7 @@ Slack group DM. You paste a game's share text, the app identifies the game,
 extracts the score and puzzle date, and ranks everyone on a normalized
 cross-game board.
 
-Five games: MapTap, Krillion, Size It Up, Globle, Fermi (plus Krillion ∞, which
+Six games: MapTap, Krillion, Size It Up, Globle, Fermi, DailyTens (plus Krillion ∞, which
 is stored but never scored).
 
 This file covers the invariants and the traps. `README.md` covers setup.
@@ -83,7 +83,7 @@ pairs or VS16 ambiguity to write regexes against. `emoji.ts` is deliberately
 *not* exhaustive for MapTap's round markers — that set varies with score bands
 and is open-ended, so MapTap's regex matches any pictographic cluster instead.
 
-### Adding a sixth game
+### Adding a game
 
 One file in `games/`, one line in `registry.ts`, one entry in
 `lib/games/config.ts`, fixtures in `__fixtures__/`. Then check
@@ -131,12 +131,18 @@ limit, not a bug — don't "fix" it by loosening to a constant epsilon.
 
 ### Streaks
 
-`scoring/streaks.ts`: consecutive days on which a player logged **all five**
-daily games, keyed on `puzzle_date` rather than when they submitted, ending
+`scoring/streaks.ts`: consecutive days on which a player logged **every**
+daily game, keyed on `puzzle_date` rather than when they submitted, ending
 today. An incomplete today doesn't break it; counting starts at yesterday until
 today is complete, or the badge would vanish every morning. Krillion ∞ never
 counts. The 🔥 badge shows from `STREAK_MIN = 2`. Like everything else, it's
 computed on read.
+
+Because it's computed on read, a newly added game would make every past day
+incomplete and wipe every streak the day it shipped. `GAMES[g].streakFrom` is
+the first puzzle date a game is required on; DailyTens joined on 2026-11-14, so
+a full day before that is five games and six from then on. Set it on any game
+you add.
 
 ## Dates
 
@@ -144,13 +150,14 @@ computed on read.
 |---|---|
 | Globle | explicit in the text |
 | MapTap | month + day, no year — nearest-distance year inference |
-| Krillion, Fermi | puzzle number vs. a verified epoch |
+| Krillion, Fermi, DailyTens | puzzle number vs. a verified epoch |
 | Size It Up | explicit since Nov 2026 (`Magnitudle — Size It Up` layout); older shares print **nothing** — sibling inference, then submission day |
 
 `PUZZLE_EPOCHS` holds **two** anchors per game and `assertEpochsConsistent()`
 cross-checks them, so a typo fails a test instead of shifting every historical
 date. Verified against every post in the Slack history: Krillion across 9 points,
-Fermi across 4.
+Fermi across 4. **DailyTens has one** (#921 = 2026-11-13, its first post), so the
+check skips it — add a second pair from a later post.
 
 `puzzle_number` is persisted alongside `puzzle_date` specifically so a
 renumbering is a one-constant fix plus a recompute, not lost data.
@@ -262,13 +269,18 @@ chart coloured by game.
 — which rendered `#333` body text on `#111` cards at ~1.4:1 contrast across the
 whole app. The colour token is now `--color-on-light`.
 
-Fermi's page is monochrome: four accents can't cover five games, and it's already
-the odd one out (log scale, float multiplier), so that reads as intent.
+Fermi's page is monochrome: four accents can't cover the games, and it's already
+the odd one out (log scale, float multiplier), so that reads as intent. DailyTens
+shares MapTap's blue — the one deliberate overlap, asserted in `config.test.ts`.
+
+DailyTens scores the 🏆 count of its 10-cell grid (❌ is a miss) and displays as
+`6/10`. A grid that isn't exactly 10 cells is rejected rather than scored, since
+missing cells would silently count as misses.
 
 ## Submit flow
 
 One tab per daily game, one save per tab. Submitting advances to the next game
-with nothing logged *this session*, so playing all five and pasting as you go is
+with nothing logged *this session*, so playing them all and pasting as you go is
 a straight walk; clicking a tab directly covers "I only came to fix Globle".
 
 `submitScore` takes an `onlyGame` argument and the tab supplies it, so scoping
@@ -336,9 +348,9 @@ just by the disabled button.
   layout fixes this going forward; for old-layout pastes, sibling inference is the
   real mitigation and the UI marks assumed dates as editable.
 - **Krillion ∞ can no longer be submitted through the UI.** The tabs cover the
-  five daily games only, and `onlyGame` scoping means a ∞ paste matches no tab.
+  daily games only, and `onlyGame` scoping means a ∞ paste matches no tab.
   The parser still reads it and the panel names it explicitly rather than
-  dropping it silently. Re-enabling it means a sixth tab or a separate route.
+  dropping it silently. Re-enabling it means another tab or a separate route.
 - **Typed Globle scores** are matched at low confidence and never auto-saved —
   `Globle #20` is a puzzle number and looks identical. Phrasings where the number
   precedes the keyword ("7 on Globle") or no game is named ("I got it in 10") are

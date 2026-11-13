@@ -4,8 +4,8 @@ import { test, expect, type Page } from "@playwright/test";
  * Smoke tests for the one flow that matters: pick a name, paste real share text
  * on a game's tab, save it, and find it on the leaderboard.
  *
- * Only the first test writes. It uses September 1 — a date outside the backfilled
- * history — so the run does not collide with real data.
+ * Only the MapTap and DailyTens tests write. Both use September 1 — a date outside
+ * the backfilled history — so the run does not collide with real data.
  */
 const MAPTAP = `www.maptap.gg September 1
 91:dart: 88:trophy: 77:clap: 95:fire: 82:star2:
@@ -47,6 +47,36 @@ test("paste a MapTap score, save it, and see it on the leaderboard", async ({ pa
   // A web save keeps the raw paste, so the hover shows the real round emoji.
   await page.getByRole("button", { name: "866" }).first().hover();
   await expect(page.getByRole("tooltip")).toHaveText("91🎯 88🏆 77👏 95🔥 82🌟");
+});
+
+/** #848 is 2026-09-01, the same out-of-history date as the MapTap row above. */
+const DAILY_TENS = `DailyTens #848
+
+       🏆   🏆
+       ❌   🏆
+       🏆   🏆
+       🏆   ❌
+       ❌   ❌
+
+https://dailytens.com/?ref=1937056`;
+
+test("saves a DailyTens grid as its trophy count out of ten", async ({ page }) => {
+  await openSubmit(page);
+  await page.selectOption("#player", { label: "Weston Watson" });
+  await page.getByRole("tab", { name: "DailyTens" }).click();
+  await expect(page.getByRole("link", { name: /Play DailyTens/ })).toHaveAttribute(
+    "href",
+    "https://dailytens.com/",
+  );
+
+  await page.fill("textarea", DAILY_TENS);
+  await expect(page.locator("text=2026-09-01")).toBeVisible();
+  await page.getByRole("button", { name: "Submit", exact: true }).click();
+  await expect(page.locator("text=/Saved DailyTens 6\\/10/")).toBeVisible();
+
+  await page.goto("/games/daily_tens?range=all");
+  await page.getByRole("button", { name: "6/10" }).first().hover();
+  await expect(page.getByRole("tooltip")).toContainText("❌ 🏆");
 });
 
 test("jumps straight to one game and links out to it", async ({ page }) => {

@@ -64,6 +64,11 @@ export function breakdownFor(
       });
       if (detail.percentile !== undefined) lines.push(`top ${detail.percentile}%`);
       break;
+
+    case "daily_tens":
+      // The grid is the only detail: the score is already its trophy count.
+      if (withArt) detail.grid.forEach((row) => lines.push(row.map(tile).join(" ")));
+      break;
   }
 
   return lines.length > 0 ? { lines } : null;

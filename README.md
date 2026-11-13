@@ -4,7 +4,7 @@ Daily puzzle scores for the Real Maptappers. Paste the share text from any game,
 the app works out which game it is and what you scored, and it ranks everyone on
 a normalized cross-game leaderboard.
 
-Five games: **MapTap**, **Krillion**, **Size It Up**, **Globle**, **Fermi**.
+Six games: **MapTap**, **Krillion**, **Size It Up**, **Globle**, **Fermi**, **DailyTens**.
 
 ## How the scoring works
 
@@ -100,7 +100,7 @@ instead of the form. No migration, no data change.
 
 ```
 src/lib/parser/     share-text parser — pure, isomorphic, runs in both browser and server
-  games/            one file per game; adding a sixth is one file + one registry line
+  games/            one file per game; adding one is one file + one registry line
   __fixtures__/     real .txt pastes, exact bytes
 src/lib/scoring/    z.ts (per-slot z) and aggregate.ts (standings)
 src/lib/games/      game config: direction, transform, bounds, accent

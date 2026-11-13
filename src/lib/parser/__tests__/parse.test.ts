@@ -296,6 +296,78 @@ describe("Fermi", () => {
   });
 });
 
+describe("DailyTens", () => {
+  /** Shared on the puzzle's own day, so no out-of-range warning fires. */
+  const parseOn13th = (name: string) =>
+    parsePaste(fixture(name), { submittedAt: new Date("2026-11-13T21:19:54Z") });
+
+  it("scores the trophy count and dates the puzzle from its number", () => {
+    const r = parseOn13th("dailytens-unicode.txt");
+    expect(r.status).toBe("ok");
+    expect(r.entries).toHaveLength(1);
+    const e = r.entries[0];
+    expect(e.game).toBe("daily_tens");
+    expect(e.score).toBe(6);
+    expect(e.puzzleNumber).toBe(921);
+    expect(e.puzzleDate).toBe("2026-11-13");
+    expect(e.puzzleDateSource).toBe("puzzle-number");
+    expect(e.issues).toEqual([]);
+    expect(e.detail).toEqual({
+      kind: "daily_tens",
+      grid: [
+        ["trophy", "trophy"],
+        ["x", "trophy"],
+        ["trophy", "trophy"],
+        ["trophy", "x"],
+        ["x", "x"],
+      ],
+    });
+  });
+
+  it("parses the Slack shortcode form under commentary", () => {
+    const r = parseOn13th("dailytens-slack-shortcodes.txt");
+    expect(r.failures).toHaveLength(0);
+    expect(r.entries).toHaveLength(1);
+    expect(r.entries[0].score).toBe(3);
+    expect(r.entries[0].puzzleDate).toBe("2026-11-13");
+  });
+
+  it("rejects a grid that isn't ten answers rather than scoring the gap as misses", () => {
+    const r = parseOn13th("dailytens-truncated-grid.txt");
+    expect(r.entries).toHaveLength(0);
+    expect(r.failures.map((f) => f.issues[0].code)).toEqual(["tile-count-mismatch"]);
+  });
+
+  it("reports a header with no grid", () => {
+    const r = parsePaste("DailyTens #921\n\nhttps://dailytens.com/", {
+      submittedAt: new Date("2026-11-13T21:19:54Z"),
+    });
+    expect(r.entries).toHaveLength(0);
+    expect(r.failures[0].issues[0].code).toBe("missing-score");
+  });
+
+  it("leaves a mention in chatter unrecognized", () => {
+    const r = parseOn13th("dailytens-anchor-in-prose.txt");
+    expect(r.entries).toHaveLength(0);
+    expect(r.failures).toHaveLength(0);
+  });
+
+  it("warns when the puzzle number lands far from the submission day", () => {
+    // Fixtures' default clock is September, two months before #921.
+    const e = parse("dailytens-unicode.txt").entries[0];
+    expect(e.issues.map((i) => i.code)).toEqual(["puzzle-number-out-of-range"]);
+  });
+
+  it("parses alongside another game in one paste", () => {
+    const r = parsePaste(
+      `${fixture("fermi-exact-round.txt")}\n${fixture("dailytens-unicode.txt")}`,
+      { submittedAt: new Date("2026-11-13T21:19:54Z") },
+    );
+    expect(r.entries.map((e) => e.game).sort()).toEqual(["daily_tens", "fermi"]);
+    expect(r.entries.find((e) => e.game === "daily_tens")!.score).toBe(6);
+  });
+});
+
 describe("multi-game pastes", () => {
   it("parses all five games from one blob", () => {
     const r = parse("multi-all-five-games.txt");

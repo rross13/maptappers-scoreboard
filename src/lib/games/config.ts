@@ -14,6 +14,7 @@ export const GAME_SLUGS = [
   "globle",
   "fermi",
   "krillion_infinite",
+  "daily_tens",
 ] as const;
 
 export type GameSlug = (typeof GAME_SLUGS)[number];
@@ -46,6 +47,13 @@ export interface GameConfig {
   accent: Accent;
   /** Whether this game counts toward the daily leaderboards. */
   isDaily: boolean;
+  /**
+   * First puzzle date ('YYYY-MM-DD') on which a streak day needs this game.
+   * Streaks are recomputed from history on every read, so a game added later
+   * must not be required on days before it existed — that would zero every
+   * streak the day it shipped. Absent means required on every day.
+   */
+  streakFrom?: string;
 }
 
 export const GAMES: Record<GameSlug, GameConfig> = {
@@ -124,9 +132,25 @@ export const GAMES: Record<GameSlug, GameConfig> = {
     // stored but never scored against a daily group.
     isDaily: false,
   },
+  daily_tens: {
+    slug: "daily_tens",
+    name: "DailyTens",
+    url: "https://dailytens.com/",
+    direction: 1,
+    transform: "identity",
+    precision: 0,
+    suffix: "/10",
+    min: 0,
+    max: 10,
+    // Shares MapTap's blue: the brand has four accents and they are all taken.
+    // Pills spell the name out, so identity never rests on the colour.
+    accent: "blue",
+    isDaily: true,
+    streakFrom: "2026-11-14",
+  },
 };
 
-/** The five games that appear on leaderboards, in canonical display order. */
+/** The games that appear on leaderboards, in canonical display order. */
 export const DAILY_GAMES: GameConfig[] = GAME_SLUGS.map((s) => GAMES[s]).filter(
   (g) => g.isDaily,
 );

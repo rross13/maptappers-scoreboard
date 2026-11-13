@@ -64,6 +64,7 @@ describe("registry", () => {
       size_it_up: "sizeitup-grid5-with-row-scores.txt",
       globle: "globle-with-stats-header.txt",
       fermi: "fermi-basic-3-rounds.txt",
+      daily_tens: "dailytens-unicode.txt",
     };
     for (const [game, file] of Object.entries(cases)) {
       const text = normalize(fixture(file));
@@ -119,6 +120,11 @@ describe("dates", () => {
     for (const [n, date] of observed) {
       expect(dateFromPuzzleNumber("fermi", n)).toBe(date);
     }
+  });
+
+  it("maps DailyTens #921 to the day it was first posted", () => {
+    expect(dateFromPuzzleNumber("daily_tens", 921)).toBe("2026-11-13");
+    expect(dateFromPuzzleNumber("daily_tens", 922)).toBe("2026-11-14");
   });
 
   it("infers the year across the December/January boundary both ways", () => {

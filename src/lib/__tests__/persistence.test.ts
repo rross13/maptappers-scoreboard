@@ -99,6 +99,24 @@ describe("saveEntry", () => {
     // Size It Up borrowed its date from a sibling rather than defaulting to today.
     expect(rows.find((r) => r.game === "size_it_up")!.puzzleDate).toBe("2026-09-16");
   });
+
+  /** daily_tens is a later addition to the game_slug enum; this fails if the
+   *  migration that adds it hasn't been applied. */
+  it("stores a DailyTens score and reads its grid back as detail", async () => {
+    const p = await makePlayer("riley");
+    const paste = fixture("dailytens-unicode.txt");
+    const [entry] = parsePaste(paste, {
+      submittedAt: new Date("2026-11-13T21:19:54Z"),
+    }).entries;
+    await saveEntry(p.id, entry, "web", paste);
+
+    const [row] = await getScores("2026-11-13", "2026-11-13");
+    expect(row.game).toBe("daily_tens");
+    expect(row.rawScore).toBe(6);
+    expect(row.puzzleNumber).toBe(921);
+    expect(row.artVerified).toBe(true);
+    expect(row.detail).toEqual(entry.detail);
+  });
 });
 
 describe("raw paste", () => {

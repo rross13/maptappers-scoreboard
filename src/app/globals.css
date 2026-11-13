@@ -57,7 +57,7 @@
   [data-accent="coral"] {
     --accent: var(--color-coral);
   }
-  /* Fermi: four accents cannot cover five games, so the fifth is monochrome. */
+  /* Fermi: four accents cannot cover the games, so Fermi is monochrome. */
   [data-accent="mono"] {
     --accent: var(--color-paper);
   }

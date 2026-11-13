@@ -61,7 +61,7 @@ export default async function TodayPage({ searchParams }: { searchParams: Search
   const best = bestScores(rows);
 
   // What each player has already logged today, which is what locks a tab in the
-  // submit dialog. Seven players times five games — small enough to hand over
+  // submit dialog. Seven players times six games — small enough to hand over
   // whole rather than fetch per selection.
   const already: Record<
     string,

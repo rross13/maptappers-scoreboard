@@ -38,6 +38,9 @@ export const EMOJI_TO_SHORTCODE: Record<string, string> = {
   "\u{1F30F}": "earth_asia",
   "\u{1F525}": "fire",
 
+  // DailyTens grid: a 🏆 is a correct answer, a ❌ a miss
+  "\u274C": "x",
+
   // Common MapTap round markers. Present so round emoji round-trip for display;
   // parsing does not depend on this list being complete.
   "\u{1F3AF}": "dart",

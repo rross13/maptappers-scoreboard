@@ -15,6 +15,13 @@
       "when": 1790185724160,
       "tag": "0001_fantastic_kat_farrell",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794605391284,
+      "tag": "0002_tidy_jamie_braddock",
+      "breakpoints": true
     }
   ]
 }

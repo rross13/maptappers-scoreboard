@@ -2,7 +2,7 @@ import { DAILY_GAMES, type GameSlug } from "@/lib/games/config";
 import { addDays } from "@/lib/parser/dates";
 import type { CivilDate } from "@/lib/parser/types";
 
-/** One day of five isn't a streak; the badge starts at two. */
+/** One complete day isn't a streak; the badge starts at two. */
 export const STREAK_MIN = 2;
 
 export interface PlayDay {
@@ -16,19 +16,24 @@ export interface PlayDay {
  * game, ending today.
  *
  * An incomplete today doesn't break a streak: the day is still in progress, so
- * counting starts from yesterday until today has all five. Players with no
- * streak are absent from the map.
+ * counting starts from yesterday until today is complete. A game is only
+ * required from its `streakFrom` date onward. Players with no streak are absent
+ * from the map.
  */
 export function streaks(rows: PlayDay[], today: CivilDate): Map<string, number> {
   const daily = new Set<string>(DAILY_GAMES.map((g) => g.slug));
+  const required = (date: CivilDate) =>
+    DAILY_GAMES.filter((g) => g.streakFrom === undefined || g.streakFrom <= date);
   const played = new Map<string, Set<string>>();
   for (const r of rows) {
     if (!daily.has(r.game)) continue;
     const key = `${r.playerId}|${r.puzzleDate}`;
     (played.get(key) ?? played.set(key, new Set()).get(key)!).add(r.game);
   }
-  const complete = (playerId: string, date: CivilDate) =>
-    played.get(`${playerId}|${date}`)?.size === daily.size;
+  const complete = (playerId: string, date: CivilDate) => {
+    const games = played.get(`${playerId}|${date}`);
+    return games !== undefined && required(date).every((g) => games.has(g.slug));
+  };
 
   const result = new Map<string, number>();
   for (const playerId of new Set(rows.map((r) => r.playerId))) {

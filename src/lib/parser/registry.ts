@@ -5,6 +5,7 @@ import { sizeItUp } from "./games/sizeItUp";
 import { globle } from "./games/globle";
 import { globleFreeform } from "./games/globleFreeform";
 import { fermi } from "./games/fermi";
+import { dailyTens } from "./games/dailyTens";
 
 /** Adding a game is one file plus one entry here. */
 export const GAME_REGISTRY: GameDefinition[] = [
@@ -14,6 +15,7 @@ export const GAME_REGISTRY: GameDefinition[] = [
   sizeItUp,
   globle,
   fermi,
+  dailyTens,
   globleFreeform,
 ];
 

@@ -90,12 +90,12 @@ export function GamePill({
 }
 
 /**
- * The all-five-games streak shown beside a name. Renders nothing below
+ * The all-daily-games streak shown beside a name. Renders nothing below
  * STREAK_MIN, so call sites can pass whatever the map holds.
  */
 export function StreakBadge({ days }: { days: number | undefined }) {
   if (!days || days < STREAK_MIN) return null;
-  const label = `${days}-day streak of all five games`;
+  const label = `${days}-day streak of every daily game`;
   return (
     <span
       title={label}

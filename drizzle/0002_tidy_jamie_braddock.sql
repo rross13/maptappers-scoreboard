@@ -1,0 +1,1 @@
+ALTER TYPE "public"."game_slug" ADD VALUE 'daily_tens';

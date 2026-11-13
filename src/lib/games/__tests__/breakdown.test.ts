@@ -112,4 +112,16 @@ describe("breakdownFor", () => {
       expect(breakdownFor(d, true)?.lines).toEqual(["01  1.50×", "02  122×"]);
     });
   });
+
+  describe("DailyTens", () => {
+    it("redraws the grid as pasted", () => {
+      expect(breakdownFor(detailOf("dailytens-unicode.txt"), true)?.lines).toEqual([
+        "🏆 🏆", "❌ 🏆", "🏆 🏆", "🏆 ❌", "❌ ❌",
+      ]);
+    });
+
+    it("has nothing beyond the score without verified art", () => {
+      expect(breakdownFor(detailOf("dailytens-unicode.txt"), false)).toBeNull();
+    });
+  });
 });

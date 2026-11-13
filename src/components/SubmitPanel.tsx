@@ -36,7 +36,7 @@ type SavedMap = Partial<Record<GameSlug, ExistingScore>>;
  * One tab per daily game, one submission per tab.
  *
  * Submitting advances to the next game still unlogged in this session, so the
- * common case — play all five, paste each as you go — is a straight walk with no
+ * common case — play them all, paste each as you go — is a straight walk with no
  * extra clicks, while clicking a tab directly handles "I only came to fix
  * Globle". A tab switch clears the box, because each tab is its own submission;
  * the one exception is the "switch to X" button on a wrong-tab paste, which
@@ -443,7 +443,7 @@ function SavedSoFar({ saved }: { saved: SavedMap }) {
       })}
       {done.length === DAILY_GAMES.length && (
         <p className="text-label text-muted pt-1">
-          That&rsquo;s all five. Close this to see the board.
+          That&rsquo;s all {DAILY_GAMES.length}. Close this to see the board.
         </p>
       )}
     </div>

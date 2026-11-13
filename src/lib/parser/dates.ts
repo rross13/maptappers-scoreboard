@@ -79,6 +79,10 @@ export function monthFromName(name: string): number | null {
  * them, so a typo in one constant fails a test rather than silently shifting
  * every historical date. Both sets were confirmed against every observed post
  * in the Slack history (Krillion across 9 points, Fermi across 4).
+ *
+ * DailyTens has only ONE: #921 was the first post, on 2026-11-13, and the site
+ * publishes no archive dates. Add a second pair from a later post once one
+ * exists, so the cross-check covers it too.
  */
 export const PUZZLE_EPOCHS = {
   krillion: [
@@ -89,13 +93,15 @@ export const PUZZLE_EPOCHS = {
     { number: 50, date: asCivil("2026-09-14") },
     { number: 53, date: asCivil("2026-09-17") },
   ],
+  daily_tens: [{ number: 921, date: asCivil("2026-11-13") }],
 } as const;
 
 export type EpochGame = keyof typeof PUZZLE_EPOCHS;
 
 export function assertEpochsConsistent(): void {
   for (const [game, pairs] of Object.entries(PUZZLE_EPOCHS)) {
-    const [a, b] = pairs;
+    const [a, b]: readonly { number: number; date: CivilDate }[] = pairs;
+    if (!b) continue;
     const expected = addDays(a.date, b.number - a.number);
     if (expected !== b.date) {
       throw new Error(

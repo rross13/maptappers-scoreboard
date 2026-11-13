@@ -60,7 +60,7 @@ export async function getStandings(range: Range, metric: Metric) {
   };
 }
 
-/** Current all-five-games streak per player id, in the scoreboard's timezone. */
+/** Current all-daily-games streak per player id, in the scoreboard's timezone. */
 export async function getStreaks(): Promise<Map<string, number>> {
   return streaks(await getPlayDays(), civilDateIn(new Date(), SCOREBOARD_TZ));
 }

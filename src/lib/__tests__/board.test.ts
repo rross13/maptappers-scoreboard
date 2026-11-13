@@ -18,7 +18,7 @@ function sortDay(raw: string) {
 describe("day board columns", () => {
   it("offers player, streak and every daily game", () => {
     expect(dayColumns().map((c) => c.key)).toEqual([
-      "player", "streak", "maptap", "krillion", "size_it_up", "globle", "fermi",
+      "player", "streak", "maptap", "krillion", "size_it_up", "globle", "fermi", "daily_tens",
     ]);
   });
 
