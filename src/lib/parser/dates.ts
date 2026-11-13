@@ -36,6 +36,11 @@ export function addDays(d: CivilDate, n: number): CivilDate {
   return civil(dt.getUTCFullYear(), dt.getUTCMonth() + 1, dt.getUTCDate());
 }
 
+/** 0 = Sunday … 6 = Saturday. */
+export function dayOfWeek(d: CivilDate): number {
+  return toUtcNoon(d).getUTCDay();
+}
+
 /** A strict YYYY-MM-DD that names a real day, or null. For untrusted input
  *  such as a query string; `asCivil` trusts its argument. */
 export function parseCivil(s: string | undefined): CivilDate | null {

@@ -1,8 +1,8 @@
 import { DAILY_GAMES, type GameSlug } from "@/lib/games/config";
-import { addDays } from "@/lib/parser/dates";
+import { isWorkday, previousWorkday } from "./workdays";
 import type { CivilDate } from "@/lib/parser/types";
 
-/** One complete day isn't a streak; the badge starts at two. */
+/** One complete workday isn't a streak; the badge starts at two. */
 export const STREAK_MIN = 2;
 
 export interface PlayDay {
@@ -12,13 +12,17 @@ export interface PlayDay {
 }
 
 /**
- * Consecutive days, by puzzle date, on which each player logged every daily
+ * Consecutive workdays, by puzzle date, on which each player logged every daily
  * game, ending today.
  *
+ * Weekends and observed federal holidays are skipped entirely: missing one never
+ * breaks a streak, and playing one never adds to it. Most of the team only plays
+ * on working days.
+ *
  * An incomplete today doesn't break a streak: the day is still in progress, so
- * counting starts from yesterday until today is complete. A game is only
- * required from its `streakFrom` date onward. Players with no streak are absent
- * from the map.
+ * counting starts from the previous workday until today is complete. A game is
+ * only required from its `streakFrom` date onward. Players with no streak are
+ * absent from the map.
  */
 export function streaks(rows: PlayDay[], today: CivilDate): Map<string, number> {
   const daily = new Set<string>(DAILY_GAMES.map((g) => g.slug));
@@ -37,11 +41,12 @@ export function streaks(rows: PlayDay[], today: CivilDate): Map<string, number> 
 
   const result = new Map<string, number>();
   for (const playerId of new Set(rows.map((r) => r.playerId))) {
-    let day = complete(playerId, today) ? today : addDays(today, -1);
+    let day =
+      isWorkday(today) && complete(playerId, today) ? today : previousWorkday(today);
     let n = 0;
     while (complete(playerId, day)) {
       n += 1;
-      day = addDays(day, -1);
+      day = previousWorkday(day);
     }
     if (n > 0) result.set(playerId, n);
   }

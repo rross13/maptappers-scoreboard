@@ -131,10 +131,15 @@ limit, not a bug — don't "fix" it by loosening to a constant epsilon.
 
 ### Streaks
 
-`scoring/streaks.ts`: consecutive days on which a player logged **every**
-daily game, keyed on `puzzle_date` rather than when they submitted, ending
-today. An incomplete today doesn't break it; counting starts at yesterday until
-today is complete, or the badge would vanish every morning. Krillion ∞ never
+`scoring/streaks.ts`: consecutive **workdays** on which a player logged
+**every** daily game, keyed on `puzzle_date` rather than when they submitted,
+ending today. Weekends and the 11 US federal holidays (as observed — a Saturday
+holiday moves to Friday, a Sunday one to Monday; `scoring/workdays.ts`) are
+skipped outright: missing one never breaks a streak and playing one never adds
+to it, because most of the team only plays on working days. They're computed by
+rule, so there's no yearly list to maintain. An incomplete today doesn't break
+it; counting starts at the previous workday until today is complete, or the
+badge would vanish every morning. Krillion ∞ never
 counts. The 🔥 badge shows from `STREAK_MIN = 2`. Like everything else, it's
 computed on read.
 

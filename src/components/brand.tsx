@@ -95,7 +95,7 @@ export function GamePill({
  */
 export function StreakBadge({ days }: { days: number | undefined }) {
   if (!days || days < STREAK_MIN) return null;
-  const label = `${days}-day streak of every daily game`;
+  const label = `${days}-working-day streak of every daily game`;
   return (
     <span
       title={label}
