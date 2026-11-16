@@ -1,10 +1,21 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { sql } from "drizzle-orm";
 import { db } from "@/db";
 import { players, scoreRevisions, scores } from "@/db/schema";
 import { getPlayDays, getPlayersForAdmin, getScores, saveEntry } from "@/lib/queries";
 import { parsePaste } from "@/lib/parser";
 import { fixture, SUBMITTED_AT } from "@/lib/parser/__tests__/fixtures";
+import { addDays, civilDateIn, SCOREBOARD_TZ } from "@/lib/parser/dates";
+import { submitScore } from "@/app/actions/scores";
+
+/**
+ * Every database test lives in this one file. Each suite truncates the shared
+ * tables, and Vitest runs files in parallel, so a second file's truncate would
+ * delete this one's rows mid-test.
+ */
+
+// revalidatePath needs a Next request context, which Vitest doesn't have.
+vi.mock("next/cache", () => ({ revalidatePath: () => {} }));
 
 async function reset() {
   await db.execute(
@@ -290,5 +301,52 @@ describe("row counts", () => {
     await saveEntry(p.id, { ...entry, score: 900 });
     // The join must not fan the score out into one row per revision.
     expect(await getScores()).toHaveLength(1);
+  });
+});
+
+/** DailyTens #921 is 2026-11-13. */
+const DAILY_TENS_921 = fixture("dailytens-unicode.txt");
+
+describe("submitScore for a past day", () => {
+  let playerId: string;
+  beforeEach(async () => {
+    await reset();
+    playerId = (await makePlayer("riley")).id;
+  });
+
+  it("saves a share for the day being recorded", async () => {
+    const r = await submitScore(playerId, DAILY_TENS_921, false, "daily_tens", "2026-11-13");
+    expect(r.ok).toBe(true);
+    expect(r.saved.map((s) => s.puzzleDate)).toEqual(["2026-11-13"]);
+  });
+
+  it("refuses a share for a different day and says why", async () => {
+    const r = await submitScore(playerId, DAILY_TENS_921, false, "daily_tens", "2026-11-12");
+    expect(r.ok).toBe(false);
+    expect(r.problems).toEqual([
+      "That's the DailyTens puzzle for 2026-11-13, not 2026-11-12. Go to 2026-11-13 on the board to record it.",
+    ]);
+    expect(await db.select().from(scores)).toHaveLength(0);
+  });
+
+  it("puts an undated share on the day being recorded", async () => {
+    const paste = fixture("sizeitup-grid5-with-row-scores.txt");
+    const r = await submitScore(playerId, paste, false, "size_it_up", "2026-11-12");
+    expect(r.saved.map((s) => s.puzzleDate)).toEqual(["2026-11-12"]);
+  });
+
+  it("refuses a future or malformed day", async () => {
+    const tomorrow = addDays(civilDateIn(new Date(), SCOREBOARD_TZ), 1);
+    for (const day of [tomorrow, "2026-02-30", "yesterday"]) {
+      const r = await submitScore(playerId, DAILY_TENS_921, false, "daily_tens", day);
+      expect(r.ok, day).toBe(false);
+      expect(r.message, day).toBe("That isn't a day you can record.");
+    }
+    expect(await db.select().from(scores)).toHaveLength(0);
+  });
+
+  it("still saves any day's share when no day is given, as today's dialog does", async () => {
+    const r = await submitScore(playerId, DAILY_TENS_921, false, "daily_tens");
+    expect(r.saved.map((s) => s.puzzleDate)).toEqual(["2026-11-13"]);
   });
 });

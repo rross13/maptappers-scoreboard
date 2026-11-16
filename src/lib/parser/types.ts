@@ -101,6 +101,7 @@ export interface ParseResult {
 export interface ParseContext {
   submittedAt: Date;
   timeZone: string;
+  /** Where undated shares land: the submission day unless the caller says otherwise. */
   submissionDay: CivilDate;
   /** Whether to run the low-confidence freeform Globle matcher. */
   allowFreeform: boolean;

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parsePaste } from "..";
 import { fixture, fixtureNames, SUBMITTED_AT } from "./fixtures";
+import { asCivil } from "../dates";
 
 const parse = (name: string) =>
   parsePaste(fixture(name), { submittedAt: SUBMITTED_AT });
@@ -127,6 +128,24 @@ describe("Size It Up", () => {
     expect(e.puzzleDate).toBe("2026-09-18");
   });
 
+  it("falls back to the caller's date instead when recording a past day", () => {
+    const e = parsePaste(fixture("sizeitup-grid5-with-row-scores.txt"), {
+      submittedAt: SUBMITTED_AT,
+      fallbackDate: asCivil("2026-09-15"),
+    }).entries[0];
+    expect(e.puzzleDate).toBe("2026-09-15");
+    expect(e.puzzleDateSource).toBe("submission-date");
+  });
+
+  it("still prefers a sibling's date over the caller's", () => {
+    const siu = parsePaste(fixture("multi-all-five-games.txt"), {
+      submittedAt: SUBMITTED_AT,
+      fallbackDate: asCivil("2026-09-01"),
+    }).entries.find((e) => e.game === "size_it_up")!;
+    expect(siu.puzzleDate).toBe("2026-09-16");
+    expect(siu.puzzleDateSource).toBe("sibling-inference");
+  });
+
   describe("dated Magnitudle layout", () => {
     const ON_THE_DAY = new Date("2026-11-03T16:30:00Z");
     const parseOnTheDay = (text: string) =>
@@ -228,6 +247,14 @@ describe("Globle freeform", () => {
 
   it("tolerates the recurring 'Globe' typo", () => {
     expect(parse("globle-freeform-globe-typo.txt").entries[0].score).toBe(9);
+  });
+
+  it("dates a typed score to the caller's fallback day", () => {
+    const e = parsePaste(fixture("globle-freeform-in-9.txt"), {
+      submittedAt: SUBMITTED_AT,
+      fallbackDate: asCivil("2026-09-15"),
+    }).entries[0];
+    expect(e.puzzleDate).toBe("2026-09-15");
   });
 
   it("rejects a puzzle number posing as a score", () => {

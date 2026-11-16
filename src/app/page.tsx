@@ -28,10 +28,9 @@ export default async function TodayPage({ searchParams }: { searchParams: Search
   const date = requested && requested < today ? requested : today;
   const isToday = date === today;
 
-  const [roster, dayScores, todayScores, streakDays] = await Promise.all([
+  const [roster, dayScores, streakDays] = await Promise.all([
     getPlayers(),
     getScores(date, date),
-    isToday ? null : getScores(today, today),
     getStreaks(),
   ]);
 
@@ -60,14 +59,15 @@ export default async function TodayPage({ searchParams }: { searchParams: Search
   const sorted = sortRows(rows, columns.find((c) => c.key === sort.key)!, sort);
   const best = bestScores(rows);
 
-  // What each player has already logged today, which is what locks a tab in the
-  // submit dialog. Seven players times six games — small enough to hand over
-  // whole rather than fetch per selection.
+  // What each player has already logged for the day on screen, which is what
+  // locks a tab in the submit dialog — it records for that day. Seven players
+  // times six games, small enough to hand over whole rather than fetch per
+  // selection.
   const already: Record<
     string,
     Partial<Record<GameSlug, { score: number; puzzleDate: string; revisions: number }>>
   > = {};
-  for (const row of todayScores ?? dayScores) {
+  for (const row of dayScores) {
     (already[row.playerId] ??= {})[row.game] = {
       score: row.rawScore,
       puzzleDate: row.puzzleDate,
@@ -110,9 +110,14 @@ export default async function TodayPage({ searchParams }: { searchParams: Search
               )}
             </nav>
           </div>
+          {/* Keyed by day: the page stays mounted across day links, and a
+              session's saves and open tab belong to the day they were made on. */}
           <SubmitModal
+            key={date}
             roster={roster.map((p) => ({ id: p.id, displayName: p.displayName }))}
             existing={already}
+            date={date}
+            dateLabel={isToday ? "today" : weekday(date)}
             today={today}
           />
         </div>

@@ -4,8 +4,9 @@ import { test, expect, type Page } from "@playwright/test";
  * Smoke tests for the one flow that matters: pick a name, paste real share text
  * on a game's tab, save it, and find it on the leaderboard.
  *
- * Only the MapTap and DailyTens tests write. Both use September 1 — a date outside
- * the backfilled history — so the run does not collide with real data.
+ * Only the MapTap, DailyTens and past-day tests write. They use September 1 and
+ * 2 — dates outside the backfilled history — so the run does not collide with
+ * real data. Delete those rows afterwards.
  */
 const MAPTAP = `www.maptap.gg September 1
 91:dart: 88:trophy: 77:clap: 95:fire: 82:star2:
@@ -77,6 +78,35 @@ test("saves a DailyTens grid as its trophy count out of ten", async ({ page }) =
   await page.goto("/games/daily_tens?range=all");
   await page.getByRole("button", { name: "6/10" }).first().hover();
   await expect(page.getByRole("tooltip")).toContainText("❌ 🏆");
+});
+
+test("records a past day's score from that day on the board", async ({ page }) => {
+  await page.goto("/?date=2026-09-02");
+  await expect(page.getByRole("button", { name: "Play & Submit" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Record a previous date's score" }).click();
+  await expect(page.getByRole("heading", { name: /Record a score for .* 2026-09-02/ })).toBeVisible();
+  await page.selectOption("#player", { label: "Owen" });
+  await page.getByRole("tab", { name: "DailyTens" }).click();
+
+  // #848 is September 1 — the wrong day for this board, so it can't be saved here.
+  await page.fill("textarea", DAILY_TENS);
+  await expect(
+    page.locator("text=That's the DailyTens puzzle for 2026-09-01, not 2026-09-02."),
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Submit", exact: true })).toBeDisabled();
+
+  await page.fill("textarea", DAILY_TENS.replace("#848", "#849"));
+  await page.getByRole("button", { name: "Submit", exact: true }).click();
+  await expect(page.locator("text=/Saved DailyTens 6\\/10/")).toBeVisible();
+
+  // Reopened, the day's own score locks the tab — not today's.
+  await page.goto("/?date=2026-09-02");
+  await page.getByRole("button", { name: "Record a previous date's score" }).click();
+  await page.getByRole("tab", { name: "DailyTens" }).click();
+  await expect(page.locator("textarea")).toHaveAttribute(
+    "placeholder",
+    "Already logged for 2026-09-02.",
+  );
 });
 
 test("jumps straight to one game and links out to it", async ({ page }) => {

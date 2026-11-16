@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { parsePaste, SCOREBOARD_TZ } from "@/lib/parser";
+import { civilDateIn, parseCivil } from "@/lib/parser/dates";
+import { wrongDayReason } from "@/lib/submit-date";
 import { GAMES, type GameSlug } from "@/lib/games/config";
 import { getPlayers, saveEntry, type SaveResult } from "@/lib/queries";
 
@@ -23,12 +25,17 @@ export interface SubmitState {
  *
  * Omitting `onlyGame` keeps the original save-everything behaviour, which the
  * backfill and any future bulk import still want.
+ *
+ * `forDate` is set when recording a past day from the board: only shares for
+ * that day are saved, and an undated share is taken to be for it. Without it,
+ * each share saves under whatever date it carries.
  */
 export async function submitScore(
   playerId: string,
   text: string,
   acceptLowConfidence = false,
   onlyGame?: GameSlug,
+  forDate?: string,
 ): Promise<SubmitState> {
   if (!playerId) {
     return { ok: false, saved: [], problems: [], message: "Pick your name first." };
@@ -42,11 +49,18 @@ export async function submitScore(
     return { ok: false, saved: [], problems: [], message: "Unknown player." };
   }
 
-  const result = parsePaste(text, { timeZone: SCOREBOARD_TZ });
+  const day = forDate === undefined ? undefined : parseCivil(forDate);
+  if (day === null || (day && day > civilDateIn(new Date(), SCOREBOARD_TZ))) {
+    return { ok: false, saved: [], problems: [], message: "That isn't a day you can record." };
+  }
 
-  const entries = onlyGame
+  const result = parsePaste(text, { timeZone: SCOREBOARD_TZ, fallbackDate: day });
+
+  const inGame = onlyGame
     ? result.entries.filter((e) => e.game === onlyGame)
     : result.entries;
+  const entries = inGame.filter((e) => wrongDayReason(e, day) === null);
+  const wrongDay = inGame.flatMap((e) => wrongDayReason(e, day) ?? []);
   const failures = onlyGame
     ? result.failures.filter((f) => f.game === onlyGame)
     : result.failures;
@@ -75,6 +89,7 @@ export async function submitScore(
     ...heldBack.map(
       (e) => `${e.displayName}: read as ${e.score} — confirm to save.`,
     ),
+    ...wrongDay,
   ];
 
   if (saved.length > 0) {

@@ -4,6 +4,8 @@ import { useMemo, useState, useSyncExternalStore, useTransition } from "react";
 import { parsePaste, SCOREBOARD_TZ, type ParseResult } from "@/lib/parser";
 import { submitScore, type SubmitState } from "@/app/actions/scores";
 import { gameTabClass } from "@/components/brand";
+import { wrongDayReason } from "@/lib/submit-date";
+import type { CivilDate } from "@/lib/parser";
 import {
   DAILY_GAMES,
   formatScore,
@@ -22,7 +24,7 @@ export interface RosterEntry {
   displayName: string;
 }
 
-/** A score already on record for today, from the server or from this session. */
+/** A score already on record for the day, from the server or from this session. */
 export interface ExistingScore {
   score: number;
   puzzleDate: string;
@@ -42,7 +44,11 @@ type SavedMap = Partial<Record<GameSlug, ExistingScore>>;
  * the one exception is the "switch to X" button on a wrong-tab paste, which
  * carries the text over rather than making the user paste it twice.
  *
- * A game you have already logged today opens locked, showing what is on record.
+ * It records for one day: today from "Play & Submit", or the past day on screen
+ * from "Record a previous date's score". A past day only accepts shares for
+ * that day — see `wrongDayReason`.
+ *
+ * A game you have already logged for the day opens locked, showing what is on record.
  * "Replace it" unlocks the box rather than the score being uneditable: the
  * schema keeps the old value in `score_revisions`, and a mis-pasted score whose
  * only remedy is a manual DB edit is a score nobody ever fixes.
@@ -50,11 +56,14 @@ type SavedMap = Partial<Record<GameSlug, ExistingScore>>;
 export function SubmitPanel({
   roster,
   existing,
+  date,
   today,
 }: {
   roster: RosterEntry[];
-  /** Today's scores keyed by player, then game. */
+  /** The day's scores keyed by player, then game. */
   existing: Record<string, Partial<Record<string, ExistingScore>>>;
+  /** The day being recorded. */
+  date: string;
   /** The scoreboard's civil date, computed on the server. */
   today: string;
 }) {
@@ -69,19 +78,27 @@ export function SubmitPanel({
   // A remembered id that is no longer on the roster falls back to unselected.
   const playerId = roster.some((p) => p.id === stored) ? stored : "";
   const cfg = GAMES[active];
+  const forDate = date === today ? undefined : date;
 
-  // Same parser as the server, so the preview cannot disagree with what is saved.
+  // Same parser and options as the server, so the preview cannot disagree with
+  // what is saved.
   const preview: ParseResult | null = useMemo(
-    () => (text.trim() ? parsePaste(text, { timeZone: SCOREBOARD_TZ }) : null),
-    [text],
+    () =>
+      text.trim()
+        ? parsePaste(text, {
+            timeZone: SCOREBOARD_TZ,
+            fallbackDate: forDate as CivilDate | undefined,
+          })
+        : null,
+    [text, forDate],
   );
 
   // This session's saves win over the server map: a revalidation may not have
-  // landed yet, and either way the newer one is ours. Only a save *for today*
-  // locks a tab — backdating yesterday's Globle must not block today's.
+  // landed yet, and either way the newer one is ours. Only a save *for this
+  // day* locks a tab — backdating yesterday's Globle must not block today's.
   const onRecord = (g: GameSlug): ExistingScore | null => {
     const here = saved[g];
-    if (here && here.puzzleDate === today) return here;
+    if (here && here.puzzleDate === date) return here;
     return playerId ? existing[playerId]?.[g] ?? null : null;
   };
 
@@ -89,9 +106,10 @@ export function SubmitPanel({
   const locked = recorded !== null && replacing !== active;
 
   const mine = preview?.entries.filter((e) => e.game === active) ?? [];
+  const recordable = mine.filter((e) => wrongDayReason(e, forDate) === null);
   const elsewhere = preview?.entries.filter((e) => e.game !== active) ?? [];
   const failures = preview?.failures.filter((f) => f.game === active) ?? [];
-  const hasLowConfidence = mine.some((e) => e.scoreConfidence === "low");
+  const hasLowConfidence = recordable.some((e) => e.scoreConfidence === "low");
 
   function selectGame(game: GameSlug, keepText = false) {
     if (game === active) return;
@@ -104,7 +122,7 @@ export function SubmitPanel({
   function onSubmit(acceptLowConfidence: boolean) {
     const game = active;
     startTransition(async () => {
-      const result = await submitScore(playerId, text, acceptLowConfidence, game);
+      const result = await submitScore(playerId, text, acceptLowConfidence, game, forDate);
       setState(result);
       if (!result.ok) return;
 
@@ -118,7 +136,7 @@ export function SubmitPanel({
       setReplacing(null);
       const advance = nextUnlogged(game, (g) => {
         const here = next[g];
-        if (here && here.puzzleDate === today) return true;
+        if (here && here.puzzleDate === date) return true;
         return Boolean(playerId && existing[playerId]?.[g]);
       });
       if (advance) {
@@ -198,7 +216,7 @@ export function SubmitPanel({
           rows={7}
           placeholder={
             locked
-              ? `Already logged for today.`
+              ? `Already logged for ${forDate ?? "today"}.`
               : `Paste your ${cfg.name} share text here.`
           }
           // bg-ink, not bg-surface: the panel sits on a bg-surface dialog card,
@@ -216,6 +234,7 @@ export function SubmitPanel({
             mine={mine}
             elsewhere={elsewhere}
             failures={failures}
+            forDate={forDate}
             onSwitch={(g) => selectGame(g, true)}
           />
         )}
@@ -233,7 +252,7 @@ export function SubmitPanel({
             <button
               type="button"
               onClick={() => onSubmit(false)}
-              disabled={pending || !playerId || mine.length === 0}
+              disabled={pending || !playerId || recordable.length === 0}
               className="rounded-pill bg-accent text-ink text-body font-bold px-5 py-2.5 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {pending ? "Saving…" : "Submit"}
@@ -286,12 +305,14 @@ function Preview({
   mine,
   elsewhere,
   failures,
+  forDate,
   onSwitch,
 }: {
   game: GameSlug;
   mine: ParseResult["entries"];
   elsewhere: ParseResult["entries"];
   failures: ParseResult["failures"];
+  forDate: string | undefined;
   onSwitch: (game: GameSlug) => void;
 }) {
   return (
@@ -314,6 +335,9 @@ function Preview({
               {iss.message}
             </span>
           ))}
+          {wrongDayReason(e, forDate) && (
+            <span className="text-label text-paper w-full">{wrongDayReason(e, forDate)}</span>
+          )}
         </div>
       ))}
 

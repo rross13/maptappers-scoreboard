@@ -8,7 +8,8 @@ import {
 } from "@/components/SubmitPanel";
 
 /**
- * The "Play & Submit" trigger and the dialog it opens.
+ * The "Play & Submit" trigger and the dialog it opens. On a past day of the
+ * board it becomes "Record a previous date's score" and records for that day.
  *
  * Built on the native <dialog> so focus trapping, Esc-to-close and inerting the
  * page behind come from the platform instead of hand-rolled key handlers.
@@ -20,13 +21,19 @@ import {
 export function SubmitModal({
   roster,
   existing,
+  date,
+  dateLabel,
   today,
 }: {
   roster: RosterEntry[];
   existing: Record<string, Partial<Record<string, ExistingScore>>>;
+  date: string;
+  /** How the board's heading names `date`, e.g. "Friday". */
+  dateLabel: string;
   today: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  const isToday = date === today;
 
   return (
     <>
@@ -35,7 +42,7 @@ export function SubmitModal({
         onClick={() => ref.current?.showModal()}
         className="rounded-pill bg-accent text-ink text-body font-bold px-5 py-2.5 shrink-0"
       >
-        Play &amp; Submit
+        {isToday ? "Play & Submit" : "Record a previous date's score"}
       </button>
 
       <dialog
@@ -52,10 +59,12 @@ export function SubmitModal({
           <div className="flex items-start justify-between gap-4 mb-6">
             <div>
               <h2 id="submit-dialog-title" className="text-lead font-bold">
-                Submit a score
+                {isToday ? "Submit a score" : `Record a score for ${dateLabel} · ${date}`}
               </h2>
               <p className="text-label text-muted mt-1">
-                One game per tab. Submitting moves you to the next one.
+                {isToday
+                  ? "One game per tab. Submitting moves you to the next one."
+                  : "Paste the share text from that day's puzzle. One game per tab."}
               </p>
             </div>
             <button
@@ -68,7 +77,7 @@ export function SubmitModal({
             </button>
           </div>
 
-          <SubmitPanel roster={roster} existing={existing} today={today} />
+          <SubmitPanel roster={roster} existing={existing} date={date} today={today} />
         </div>
       </dialog>
     </>

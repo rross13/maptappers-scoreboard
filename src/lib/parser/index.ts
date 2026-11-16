@@ -22,6 +22,12 @@ export interface ParseOptions {
   submittedAt?: Date;
   timeZone?: string;
   allowFreeform?: boolean;
+  /**
+   * The day an undated share is assumed to be for (older Size It Up, a typed
+   * Globle score). Defaults to the day of `submittedAt`; recording a past day's
+   * scores sets it to that day.
+   */
+  fallbackDate?: CivilDate;
 }
 
 function buildContext(opts: ParseOptions = {}): ParseContext {
@@ -30,7 +36,7 @@ function buildContext(opts: ParseOptions = {}): ParseContext {
   return {
     submittedAt,
     timeZone,
-    submissionDay: civilDateIn(submittedAt, timeZone),
+    submissionDay: opts.fallbackDate ?? civilDateIn(submittedAt, timeZone),
     allowFreeform: opts.allowFreeform ?? true,
   };
 }
@@ -96,7 +102,7 @@ function resolveSiblingDates(
       entry.issues.push({
         code: "ambiguous-date",
         severity: "warning",
-        message: `Other games in this paste disagree on the date (${confident.join(", ")}), so today was assumed.`,
+        message: `Other games in this paste disagree on the date (${confident.join(", ")}), so ${entry.puzzleDate} was assumed.`,
         game: entry.game,
       });
     }

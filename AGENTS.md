@@ -236,8 +236,9 @@ allow on outward-facing work.
 
 `/` is the day's board; `?date=` steps back through earlier days (never
 forward past today — a future or malformed date falls back to today). The
-submit dialog always works on *today* whatever day is on screen, so the page
-fetches today's scores separately for its locks.
+submit dialog records for the day on screen: "Play & Submit" on today, "Record a
+previous date's score" on any earlier day. Its locks come from that day's scores,
+and it's keyed by date so a session's saves don't follow you to another day.
 
 Table sorting lives in the URL as `?sort=key` / `?sort=-key`, so headers are
 plain links and need no client JS. Column definitions are in `lib/board.ts`:
@@ -295,13 +296,21 @@ Globle line and nothing else — the client's parse is still only a preview.
 Calling it without `onlyGame` keeps the old save-everything behaviour, which the
 backfill wants.
 
-A game already scored for **today** opens locked: the box is disabled and the
+A game already scored for **the day being recorded** opens locked: the box is disabled and the
 stored value sits where the parsed preview would, so the modal shows one fact in
 one place either way. "Replace it" unlocks it — the schema keeps the old value in
 `score_revisions`, and a mis-pasted score whose only remedy is a manual DB edit
 is a score nobody ever fixes. The lock is date-scoped on purpose: pasting
 yesterday's Globle must not block today's, so a save made in this session only
-locks its tab when its `puzzleDate` matches the server-computed `today`.
+locks its tab when its `puzzleDate` matches the day being recorded.
+
+Today's dialog saves a share under whatever date it carries, since pasting last
+night's puzzle just after midnight is ordinary. A **past** day is strict:
+`submitScore` gets `forDate` and refuses a share for any other day, with the
+message from `lib/submit-date.ts` that the preview also shows, because someone who
+picked that day on the board and pasted today's puzzle has made a slip. An
+undated share (old Size It Up, a typed Globle) is taken to be for that day, via
+`parsePaste`'s `fallbackDate`.
 
 A paste that names a different game is neither saved nor silently dropped: the
 panel says what it read and offers that game's tab, and switching that way is the
@@ -370,10 +379,12 @@ just by the disabled button.
 
 `npm test` — unit + integration. Integration tests need a database whose name
 ends in `_test`; `test/setup-db.ts` refuses otherwise, so they can't touch dev
-data. `server-only` is aliased to a stub under Vitest.
+data. `server-only` is aliased to a stub under Vitest. Every DB test lives in
+`persistence.test.ts`: each suite truncates the shared tables and Vitest runs
+files in parallel, so a second DB test file deletes the first one's rows.
 
-`npm run test:e2e` — Playwright, against a running dev server. It writes a real
-row dated 2026-09-01 (outside the backfill) — delete it afterwards.
+`npm run test:e2e` — Playwright, against a running dev server. It writes real
+rows dated 2026-09-01 and 2026-09-02 (outside the backfill) — delete them afterwards.
 
 `npx tsx --env-file=.env.local scripts/verify-scoring.ts` prints z-scores for
 known slots to cross-check against a hand computation.

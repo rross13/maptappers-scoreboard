@@ -1,5 +1,4 @@
 import type { GameDefinition, GameParseResult } from "../types";
-import { civilDateIn } from "../dates";
 import { issue } from "./helpers";
 
 /**
@@ -71,7 +70,7 @@ export const globleFreeform: GameDefinition = {
         displayName: "Globle",
         score: guesses,
         scoreConfidence: "low",
-        puzzleDate: civilDateIn(ctx.submittedAt, ctx.timeZone),
+        puzzleDate: ctx.submissionDay,
         puzzleDateSource: "submission-date",
         dateConfidence: "assumed",
         detail: { kind: "globle", tiles: [], freeform: true },
